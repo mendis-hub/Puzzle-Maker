@@ -4,8 +4,11 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Tests-Passing-brightgreen.svg?style=for-the-badge)](tests/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://puzzle-generator-m2g0.onrender.com/)
 
 A high-performance, full-stack web application for generating, previewing, and exporting printable puzzle books and activity sheets. Built with **Python (FastAPI)** and a modern **Glassmorphism web frontend**, it generates mazes, word searches, and crosswords with instant real-time web previews and exports print-ready vector PDFs (Puzzle + Answer Key) bundled into ZIP archives—**100% in-memory** with zero temporary disk clutter.
+
+> 🚀 **Live Demo**: Try out the live application on Render: **[https://puzzle-generator-m2g0.onrender.com/](https://puzzle-generator-m2g0.onrender.com/)**
 
 ---
 
