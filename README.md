@@ -1,6 +1,6 @@
 # 🧩 Puzzle Generator — All-in-One Printable & Interactive Puzzle Suite
 
-[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Tests-Passing-brightgreen.svg?style=for-the-badge)](tests/)
@@ -41,7 +41,7 @@ A high-performance, full-stack web application for generating, previewing, and e
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Python 3.9+, FastAPI, Uvicorn, ReportLab (PDF Engine)
+- **Backend**: Python 3.11+, FastAPI, Uvicorn, ReportLab (PDF Engine)
 - **Frontend**: Vanilla HTML5, CSS3 (Custom Glassmorphism UI, Responsive Design), Modern JavaScript (ES6+, Canvas API, SVG)
 - **Testing**: Pytest, HTTPX, Automated End-to-End Smoke Tests
 
