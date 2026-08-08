@@ -15,8 +15,8 @@ class GenerateRequest(BaseModel):
     size: int = Field(
         default=21,
         ge=5,
-        le=99,
-        description="Grid dimension (5–99). Even values are rounded up to the next odd integer.",
+        le=101,
+        description="Grid dimension (5–101). Even values are rounded up to the next odd integer.",
     )
     seed: Optional[int] = Field(
         default=None,
@@ -24,7 +24,7 @@ class GenerateRequest(BaseModel):
     )
     shape: str = Field(
         default="square",
-        description="Maze geometric shape: square, circle, heart, star, triangle, diamond, octagon, cross.",
+        description="Maze geometric shape: square, circle, heart, star, triangle, diamond, octagon, cross, vrect.",
     )
     title: str = Field(
         default="Maze Puzzle",

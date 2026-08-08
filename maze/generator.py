@@ -2,7 +2,8 @@
 maze/generator.py
 ─────────────────
 Pure-Python Recursive Backtracker (Depth-First Search) maze generator
-supporting multiple geometric shapes (Square, Circle, Heart, Star, Triangle, Diamond, Octagon, Cross).
+supporting multiple geometric shapes (Square, Circle, Heart, Star, Triangle, Diamond, Octagon, Cross, V-Rect)
+with randomized start entrance and end exit border points.
 
 Algorithm overview
 ──────────────────
@@ -12,7 +13,7 @@ The grid is a 2-D array of integers where:
     PATH = 1  ── open passage cell
 
 Cells are constrained by `is_inside_shape(r, c, dim, shape)`.
-Entrance and exit border cells are carved open on the shape perimeter.
+Random entrance and exit border cells are selected from perimeter candidates using the RNG seed.
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ def is_inside_shape(r: int, c: int, dim: int, shape: str = "square") -> bool:
         return True
 
     center = (dim - 1) / 2.0
-    radius = center - 0.5
+    radius = center
     if radius <= 0:
         return True
 
@@ -48,7 +49,7 @@ def is_inside_shape(r: int, c: int, dim: int, shape: str = "square") -> bool:
     dist_sq = x * x + y * y
 
     if shape == "circle":
-        return dist_sq <= 1.0
+        return dist_sq <= 1.02
 
     elif shape == "heart":
         y_adj = y * 1.15 + 0.1
@@ -61,19 +62,54 @@ def is_inside_shape(r: int, c: int, dim: int, shape: str = "square") -> bool:
         return r_val <= star_radius
 
     elif shape == "triangle":
-        return (y >= -0.85) and (y <= 0.95 - 1.8 * abs(x))
+        return (y >= -0.98) and (y <= 0.98 - 1.8 * abs(x))
 
     elif shape == "diamond":
         return (abs(x) + abs(y)) <= 1.02
 
     elif shape == "octagon":
         k = (abs(x) + abs(y)) / 1.414
-        return max(abs(x), abs(y), k) <= 1.0
+        return max(abs(x), abs(y), k) <= 1.02
 
     elif shape == "cross":
-        return (abs(x) <= 0.38 and abs(y) <= 1.0) or (abs(y) <= 0.38 and abs(x) <= 1.0)
+        return (abs(x) <= 0.40 and abs(y) <= 1.02) or (abs(y) <= 0.40 and abs(x) <= 1.02)
+
+    elif shape in ("vrect", "vertical_rect", "v_rectangle"):
+        return abs(x) <= 0.65 and abs(y) <= 1.02
 
     return True
+
+
+def _find_border_openings(dim: int, shape: str, grid: List[List[int]]) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+    """
+    Find all outer perimeter openings adjacent to carved room cells.
+    Returns list of ((border_r, border_c), (room_r, room_c)).
+    """
+    openings = []
+
+    for r in range(1, dim, 2):
+        for c in range(1, dim, 2):
+            if grid[r][c] != PATH:
+                continue
+
+            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                br, bc = r + dr, c + dc
+                nr, nc = r + 2 * dr, c + 2 * dc
+                if 0 <= br < dim and 0 <= bc < dim:
+                    if (
+                        br == 0 or br == dim - 1 or bc == 0 or bc == dim - 1
+                        or not (0 <= nr < dim and 0 <= nc < dim and is_inside_shape(nr, nc, dim, shape))
+                    ):
+                        openings.append(((br, bc), (r, c)))
+
+    seen = set()
+    unique_openings = []
+    for border, room in openings:
+        if border not in seen:
+            seen.add(border)
+            unique_openings.append((border, room))
+
+    return unique_openings
 
 
 @dataclass
@@ -88,11 +124,11 @@ class MazeGrid:
     grid : list[list[int]]
         ``grid[r][c] == PATH`` → open cell; ``== WALL`` → solid wall.
     start : tuple[int, int]
-        ``(row, col)`` of open entrance cell.
+        ``(row, col)`` of randomized open entrance cell.
     end : tuple[int, int]
-        ``(row, col)`` of open exit cell.
+        ``(row, col)`` of randomized open exit cell.
     shape : str
-        Geometric shape mask name (square, circle, heart, star, triangle, diamond, octagon, cross).
+        Geometric shape mask name.
     """
     rows:  int
     cols:  int
@@ -128,7 +164,7 @@ class MazeGrid:
 
 def generate_maze(size: int = 21, seed: int | None = None, shape: str = "square") -> MazeGrid:
     """
-    Generate a maze inside the specified geometric shape.
+    Generate a maze inside the specified geometric shape with randomized start/end points.
 
     Parameters
     ----------
@@ -137,12 +173,12 @@ def generate_maze(size: int = 21, seed: int | None = None, shape: str = "square"
     seed : int | None
         Optional RNG seed for reproducibility.
     shape : str
-        Geometric shape mask ('square', 'circle', 'heart', 'star', 'triangle', 'diamond', 'octagon', 'cross').
+        Geometric shape mask.
 
     Returns
     -------
     MazeGrid
-        Populated shaped maze grid.
+        Populated shaped maze grid with randomized entrance and exit points.
     """
     if size < 5:
         raise ValueError(f"size must be ≥ 5, got {size}")
@@ -152,14 +188,12 @@ def generate_maze(size: int = 21, seed: int | None = None, shape: str = "square"
 
     grid: List[List[int]] = [[WALL] * dim for _ in range(dim)]
 
-    # Collect valid room cells inside the shape mask
     valid_rooms: List[Tuple[int, int]] = [
         (r, c) for r in range(1, dim, 2) for c in range(1, dim, 2)
         if is_inside_shape(r, c, dim, shape)
     ]
 
     if not valid_rooms:
-        # Fallback to square if shape mask is too small
         shape = "square"
         valid_rooms = [(r, c) for r in range(1, dim, 2) for c in range(1, dim, 2)]
 
@@ -201,28 +235,31 @@ def generate_maze(size: int = 21, seed: int | None = None, shape: str = "square"
         if not carved:
             dfs_stack.pop()
 
-    # Find entrance and exit cells on the outer perimeter of the carved maze
-    open_cells = [
-        (r, c) for r in range(dim) for c in range(dim)
-        if grid[r][c] == PATH
-    ]
+    # ── Pick random start & end border entrance/exit points ───────────────────
+    openings = _find_border_openings(dim, shape, grid)
 
-    if shape == "square":
+    if len(openings) >= 2:
+        start_border, start_room = rng.choice(openings)
+
+        min_dist = dim * 0.45
+        far_openings = [
+            op for op in openings
+            if math.hypot(op[0][0] - start_border[0], op[0][1] - start_border[1]) >= min_dist
+        ]
+
+        if far_openings:
+            end_border, end_room = rng.choice(far_openings)
+        else:
+            other_openings = [op for op in openings if op[0] != start_border]
+            end_border, end_room = rng.choice(other_openings) if other_openings else (start_border, start_room)
+
+        start = start_border
+        end   = end_border
+    else:
         start = (1, 0)
         end   = (dim - 2, dim - 1)
-        grid[1][0] = PATH
-        grid[dim - 2][dim - 1] = PATH
-    else:
-        # For custom shapes: entrance is top/leftmost open cell; exit is bottom/rightmost open cell
-        open_cells.sort(key=lambda p: (p[0], p[1]))
-        first_cell = open_cells[0]
-        last_cell  = open_cells[-1]
 
-        # Extend entrance to outer border cell if possible
-        start = (first_cell[0], max(0, first_cell[1] - 1))
-        end   = (last_cell[0], min(dim - 1, last_cell[1] + 1))
-
-        grid[start[0]][start[1]] = PATH
-        grid[end[0]][end[1]]     = PATH
+    grid[start[0]][start[1]] = PATH
+    grid[end[0]][end[1]]     = PATH
 
     return MazeGrid(rows=dim, cols=dim, grid=grid, start=start, end=end, shape=shape)

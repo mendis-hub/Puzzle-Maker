@@ -383,10 +383,11 @@
       opacity: 0.35; cursor: pointer;
     }
     .chip.active { opacity: 1; }
-    .chip-easy   { border-color: rgba(34,197,94,0.5);  color: var(--green);  background: rgba(34,197,94,0.08); }
-    .chip-medium { border-color: rgba(251,191,36,0.5); color: var(--gold);   background: rgba(251,191,36,0.08); }
-    .chip-hard   { border-color: rgba(249,115,22,0.5); color: var(--coral);  background: rgba(249,115,22,0.08); }
-    .chip-expert { border-color: rgba(239,68,68,0.5);  color: var(--red);    background: rgba(239,68,68,0.08); }
+    .chip-easy       { border-color: rgba(34,197,94,0.5);  color: var(--green);  background: rgba(34,197,94,0.08); }
+    .chip-medium     { border-color: rgba(251,191,36,0.5); color: var(--gold);   background: rgba(251,191,36,0.08); }
+    .chip-hard       { border-color: rgba(249,115,22,0.5); color: var(--coral);  background: rgba(249,115,22,0.08); }
+    .chip-expert     { border-color: rgba(239,68,68,0.5);  color: var(--red);    background: rgba(239,68,68,0.08); }
+    .chip-impossible { border-color: rgba(168,85,247,0.5); color: #c084fc;       background: rgba(168,85,247,0.1); }
 
     .shape-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem; }
     .shape-chip {
@@ -832,6 +833,7 @@
               <button type="button" class="shape-chip" data-shape="diamond" title="Diamond">◆ Diamond</button>
               <button type="button" class="shape-chip" data-shape="octagon" title="Octagon">🛑 Octagon</button>
               <button type="button" class="shape-chip" data-shape="cross" title="Cross">✚ Cross</button>
+              <button type="button" class="shape-chip" data-shape="vrect" title="Vertical Rectangle">▮ V-Rect</button>
             </div>
           </div>
 
@@ -842,17 +844,18 @@
               <span class="field-value" id="sizeDisplay">21 × 21</span>
             </div>
             <div class="slider-wrap">
-              <input id="sizeSlider" type="range" min="5" max="41" step="2" value="21"
+              <input id="sizeSlider" type="range" min="10" max="100" step="1" value="21"
                 aria-label="Maze size" />
               <div class="slider-ticks">
-                <span>5</span><span>13</span><span>21</span><span>31</span><span>41</span>
+                <span>10</span><span>25</span><span>50</span><span>75</span><span>100</span>
               </div>
             </div>
             <div class="difficulty">
-              <span class="chip chip-easy"   id="chip-easy">🟢 Easy</span>
-              <span class="chip chip-medium" id="chip-medium">🟡 Medium</span>
-              <span class="chip chip-hard"   id="chip-hard">🟠 Hard</span>
-              <span class="chip chip-expert" id="chip-expert">🔴 Expert</span>
+              <span class="chip chip-easy"       id="chip-easy">🟢 Easy</span>
+              <span class="chip chip-medium"     id="chip-medium">🟡 Medium</span>
+              <span class="chip chip-hard"       id="chip-hard">🟠 Hard</span>
+              <span class="chip chip-expert"     id="chip-expert">🔴 Expert</span>
+              <span class="chip chip-impossible" id="chip-impossible">💀 Impossible</span>
             </div>
           </div>
 
@@ -1282,10 +1285,11 @@ const mazeCanvas = document.getElementById('mazeCanvas');
 
 // Difficulty chips
 const chips = {
-  easy:   document.getElementById('chip-easy'),
-  medium: document.getElementById('chip-medium'),
-  hard:   document.getElementById('chip-hard'),
-  expert: document.getElementById('chip-expert'),
+  easy:       document.getElementById('chip-easy'),
+  medium:     document.getElementById('chip-medium'),
+  hard:       document.getElementById('chip-hard'),
+  expert:     document.getElementById('chip-expert'),
+  impossible: document.getElementById('chip-impossible'),
 };
 
 // Word search form
@@ -1418,10 +1422,11 @@ function updateSliderFill(slider) {
 }
 
 function getDifficulty(size) {
-  if (size <= 11) return { label: 'Easy',   chip: 'easy'   };
-  if (size <= 21) return { label: 'Medium', chip: 'medium' };
-  if (size <= 31) return { label: 'Hard',   chip: 'hard'   };
-  return               { label: 'Expert', chip: 'expert' };
+  if (size <= 15) return { label: 'Easy',       chip: 'easy'       };
+  if (size <= 30) return { label: 'Medium',     chip: 'medium'     };
+  if (size <= 50) return { label: 'Hard',       chip: 'hard'       };
+  if (size <= 75) return { label: 'Expert',     chip: 'expert'     };
+  return               { label: 'Impossible', chip: 'impossible' };
 }
 
 function updateMazeStats() {

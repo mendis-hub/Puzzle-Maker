@@ -105,7 +105,7 @@ class TestGenerate:
         assert r.status_code == 422
 
     def test_size_too_large_422(self):
-        r = client.post("/api/generate", json={"size": 101, "title": "T"})
+        r = client.post("/api/generate", json={"size": 105, "title": "T"})
         assert r.status_code == 422
 
     def test_title_too_long_422(self):

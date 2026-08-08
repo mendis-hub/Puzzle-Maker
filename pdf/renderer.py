@@ -268,6 +268,9 @@ def _draw_maze_grid(
     def is_valid_cell(r: int, col: int) -> bool:
         return 0 <= r < maze.rows and 0 <= col < maze.cols and is_inside_shape(r, col, maze.rows, shape)
 
+    def is_opening_edge(r1: int, c1: int, r2: int, c2: int) -> bool:
+        return (r1, c1) == (sr, sc) or (r1, c1) == (er, ec) or (r2, c2) == (sr, sc) or (r2, c2) == (er, ec)
+
     for r in range(maze.rows):
         for col in range(maze.cols):
             if not is_valid_cell(r, col):
@@ -276,19 +279,19 @@ def _draw_maze_grid(
             x, y = _grid_to_canvas(r, col, cell_px, origin_x, origin_y, maze.rows)
 
             # Top edge: (r-1, col)
-            if not is_valid_cell(r - 1, col) and (r, col) != (sr, sc) and (r, col) != (er, ec):
+            if not is_valid_cell(r - 1, col) and not is_opening_edge(r, col, r - 1, col):
                 c.line(x, y + cell_px, x + cell_px, y + cell_px)
 
             # Bottom edge: (r+1, col)
-            if not is_valid_cell(r + 1, col) and (r, col) != (sr, sc) and (r, col) != (er, ec):
+            if not is_valid_cell(r + 1, col) and not is_opening_edge(r, col, r + 1, col):
                 c.line(x, y, x + cell_px, y)
 
             # Left edge: (r, col-1)
-            if not is_valid_cell(r, col - 1) and (r, col) != (sr, sc) and (r, col) != (er, ec):
+            if not is_valid_cell(r, col - 1) and not is_opening_edge(r, col, r, col - 1):
                 c.line(x, y, x, y + cell_px)
 
             # Right edge: (r, col+1)
-            if not is_valid_cell(r, col + 1) and (r, col) != (sr, sc) and (r, col) != (er, ec):
+            if not is_valid_cell(r, col + 1) and not is_opening_edge(r, col, r, col + 1):
                 c.line(x + cell_px, y, x + cell_px, y + cell_px)
 
 

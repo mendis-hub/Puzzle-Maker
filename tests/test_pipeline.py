@@ -243,7 +243,7 @@ class TestExporter:
         with pytest.raises(ValueError):
             export_maze_zip(size=3)
         with pytest.raises(ValueError):
-            export_maze_zip(size=101)
+            export_maze_zip(size=105)
 
     def test_reproducible_zip_size(self):
         """

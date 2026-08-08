@@ -28,8 +28,8 @@ def export_maze_zip(
     Generate a shaped maze, solve it, render both PDFs, and return a zip archive
     — all **entirely in memory**. The filesystem is never touched.
     """
-    if not (5 <= size <= 99):
-        raise ValueError(f"size must be between 5 and 99, got {size}")
+    if not (5 <= size <= 101):
+        raise ValueError(f"size must be between 5 and 101, got {size}")
 
     # ── step 1: generate shaped maze ──────────────────────────────────────────
     maze = generate_maze(size=size, seed=seed, shape=shape)
