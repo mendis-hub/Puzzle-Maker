@@ -103,7 +103,7 @@ The script automatically detects Python, installs required dependencies, and lau
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/puzzle-generator.git
+   git clone https://github.com/mendis-hub/Puzzle-Generator.git
    cd puzzle-generator
    ```
 
