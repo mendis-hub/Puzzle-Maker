@@ -24,7 +24,7 @@ class GenerateRequest(BaseModel):
     )
     shape: str = Field(
         default="square",
-        description="Maze geometric shape: square, circle, heart, star, triangle, diamond, octagon, cross, vrect.",
+        description="Maze geometric shape: square, circle, heart, triangle, diamond, octagon, cross, vrect.",
     )
     title: str = Field(
         default="Maze Puzzle",

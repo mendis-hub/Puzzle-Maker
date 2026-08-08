@@ -55,12 +55,6 @@ def is_inside_shape(r: int, c: int, dim: int, shape: str = "square") -> bool:
         y_adj = y * 1.15 + 0.1
         return (x * x + y_adj * y_adj - 0.65) ** 3 - (x * x) * (y_adj ** 3) <= 0.0
 
-    elif shape == "star":
-        angle = math.atan2(y, x)
-        r_val = math.sqrt(dist_sq)
-        star_radius = 0.55 + 0.42 * math.cos(5 * angle - math.pi / 2)
-        return r_val <= star_radius
-
     elif shape == "triangle":
         return (y >= -0.98) and (y <= 0.98 - 1.8 * abs(x))
 

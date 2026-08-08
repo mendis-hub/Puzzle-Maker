@@ -244,10 +244,10 @@ def _draw_maze_grid(
     origin_x: float,
     origin_y: float,
 ) -> None:
-    """Draw cells and outer perimeter wall lines for any maze shape."""
+    """Draw cells for any maze shape with uniform full-cell wall thickness."""
     shape = getattr(maze, "shape", "square") or "square"
 
-    # Fill cells inside shape mask
+    # Fill cells inside shape mask with solid full-cell wall and path rects
     for r in range(maze.rows):
         for col in range(maze.cols):
             if is_inside_shape(r, col, maze.rows, shape):
@@ -258,9 +258,9 @@ def _draw_maze_grid(
                     c.setFillColor(P.wall)
                 c.rect(x, y, cell_px, cell_px, stroke=0, fill=1)
 
-    # Stroke border lines around shape perimeter
+    # Stroke crisp, continuous perimeter border around the shape mask
     c.setStrokeColor(P.border)
-    c.setLineWidth(1.6)
+    c.setLineWidth(max(2.0, cell_px * 0.25))
 
     sr, sc = maze.start
     er, ec = maze.end
