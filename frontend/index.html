@@ -965,17 +965,30 @@
        RESPONSIVE
     ═══════════════════════════════════════════════════════════════════════ */
     @media (max-width: 700px) {
-      .page { padding: 1.5rem 1rem 3rem; }
+      .page { padding: 1.25rem 0.85rem 3rem; }
       .topbar-inner { padding: 0 1rem; }
-      .topbar-badge { display: none; }
       .card-inner { grid-template-columns: 1fr; }
       .form-col {
         border-right: none;
         border-bottom: 1px solid var(--border);
-        padding: 1.5rem 1.25rem;
+        padding: 1.25rem 1rem;
       }
-      .preview-col { padding: 1.5rem 1.25rem; }
-      .maze-art, .ws-art, .cw-art { max-height: 200px; }
+      .preview-col {
+        padding: 1.25rem 1rem;
+        background: var(--bg-2);
+      }
+      /* Remove 200px max-height restriction so preview is full-size & legible on mobile */
+      .maze-art, .ws-art, .cw-art {
+        width: 100%;
+        max-width: 440px;
+        max-height: none;
+        margin: 0 auto;
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-sm);
+      }
+      .cwc-num {
+        font-size: clamp(0.35rem, 1.8vw, 0.45rem);
+      }
       .features { grid-template-columns: 1fr 1fr; }
       .tabs { flex-wrap: wrap; }
       .tab-btn { min-width: 0; flex: 1 1 calc(50% - 0.25rem); }
@@ -983,6 +996,11 @@
       h1 { font-size: 1.5rem; }
     }
     @media (max-width: 440px) {
+      .preview-col { padding: 1rem 0.75rem; }
+      .stats { grid-template-columns: 1fr 1fr; gap: 0.35rem; }
+      .stat { padding: 0.5rem 0.6rem; }
+      .stat-label { font-size: 0.58rem; }
+      .stat-value { font-size: 0.85rem; }
       .features { grid-template-columns: 1fr; }
     }
   </style>
@@ -2011,11 +2029,11 @@ async function renderWsPreview() {
     wsCanvas.style.gap = maxDim > 18 ? '1px' : '2px';
 
     let fontSize = '0.75rem';
-    if (maxDim > 12) fontSize = '0.62rem';
-    if (maxDim > 16) fontSize = '0.52rem';
-    if (maxDim > 20) fontSize = '0.42rem';
-    if (maxDim > 24) fontSize = '0.34rem';
-    if (maxDim > 28) fontSize = '0.28rem';
+    if (maxDim > 12) fontSize = '0.65rem';
+    if (maxDim > 16) fontSize = '0.55rem';
+    if (maxDim > 20) fontSize = '0.45rem';
+    if (maxDim > 24) fontSize = '0.38rem';
+    if (maxDim > 28) fontSize = '0.32rem';
 
     const PREVIEW_PALETTE = [
       { bg: 'rgba(56, 189, 248, 0.25)', fg: '#0ea5e9' },
@@ -2133,10 +2151,10 @@ async function renderCwPreview() {
     cwCanvas.style.gap = maxDim > 18 ? '1px' : '2px';
 
     let fontSize = '0.75rem';
-    if (maxDim > 12) fontSize = '0.62rem';
-    if (maxDim > 16) fontSize = '0.52rem';
-    if (maxDim > 20) fontSize = '0.42rem';
-    if (maxDim > 24) fontSize = '0.34rem';
+    if (maxDim > 12) fontSize = '0.65rem';
+    if (maxDim > 16) fontSize = '0.55rem';
+    if (maxDim > 20) fontSize = '0.45rem';
+    if (maxDim > 24) fontSize = '0.38rem';
 
     for (let r = 0; r < data.rows; r++) {
       for (let c = 0; c < data.cols; c++) {
