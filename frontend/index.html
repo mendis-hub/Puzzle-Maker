@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Puzzle Generator — Maze &amp; Word Search PDF Creator</title>
+  <meta name="description" content="Generate perfect DFS mazes and word search puzzles. Download print-ready black &amp; white vector PDFs bundled in a ZIP — entirely in memory." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════════════════════════════════ */
+    :root {
+      --bg:            #07090f;
+      --bg-2:          #0c0f1a;
+      --bg-3:          #111827;
+      --surface:       rgba(255,255,255,0.030);
+      --surface-hover: rgba(255,255,255,0.055);
+      --border:        rgba(255,255,255,0.075);
+      --border-bright: rgba(255,255,255,0.14);
+
+      --indigo:  #6366f1;
+      --violet:  #a855f7;
+      --cyan:    #22d3ee;
+      --teal:    #2dd4bf;
+      --coral:   #f97316;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --gold:    #fbbf24;
+      --amber:   #f59e0b;
+
+      --text-1:  #f1f5f9;
+      --text-2:  #94a3b8;
+      --text-3:  #475569;
+
+      --grad-main:  linear-gradient(135deg, var(--indigo) 0%, var(--violet) 100%);
+      --grad-ws:    linear-gradient(135deg, #0ea5e9 0%, #22d3ee 100%);
+      --grad-cw:    linear-gradient(135deg, #f59e0b 0%, #ec4899 100%);
+      --grad-shine: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #67e8f9 100%);
+
+      --radius:    16px;
+      --radius-sm: 10px;
+      --radius-xs: 6px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       RESET + BASE
+    ═══════════════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       DECORATIVE BACKGROUND
+    ═══════════════════════════════════════════════════════════════════════ */
+    .bg-layer {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      overflow: hidden;
+    }
+    .bg-layer::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(99,102,241,0.18) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      animation: blobDrift 14s ease-in-out infinite alternate;
+    }
+    .blob-1 { width: 600px; height: 600px; background: var(--indigo); top: -200px; left: -100px; }
+    .blob-2 { width: 500px; height: 500px; background: var(--violet); bottom: -150px; right: -80px; animation-delay: -5s; }
+    .blob-3 { width: 350px; height: 350px; background: var(--cyan); top: 40%; left: 55%; animation-delay: -9s; }
+    @keyframes blobDrift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(40px, 30px) scale(1.08); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       LAYOUT SHELL
+    ═══════════════════════════════════════════════════════════════════════ */
+    .page {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       HEADER / HERO
+    ═══════════════════════════════════════════════════════════════════════ */
+    .hero {
+      text-align: center;
+      max-width: 680px;
+      padding: 3.5rem 0 2rem;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      border: 1px solid rgba(34,211,238,0.3);
+      border-radius: 99px;
+      padding: 0.3rem 1rem;
+      background: rgba(34,211,238,0.06);
+      margin-bottom: 1.4rem;
+    }
+    .badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--cyan);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.4; transform:scale(1.5); }
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      background: var(--grad-shine);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+    }
+    .hero-sub {
+      font-size: 1rem;
+      color: var(--text-2);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       PUZZLE TYPE TABS
+    ═══════════════════════════════════════════════════════════════════════ */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.35rem;
+      margin-bottom: 1.2rem;
+      width: 100%;
+      max-width: 820px;
+    }
+    .tab-btn {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem; font-weight: 600;
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      color: var(--text-2);
+      background: transparent;
+      position: relative;
+    }
+    .tab-btn .tab-icon { font-size: 1.05rem; }
+    .tab-btn:hover { color: var(--text-1); background: var(--surface-hover); }
+    .tab-btn.active {
+      color: #fff;
+      background: var(--grad-main);
+      box-shadow: 0 0 16px rgba(99,102,241,0.4), 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .tab-btn.active.ws-active {
+      background: var(--grad-ws);
+      box-shadow: 0 0 16px rgba(14,165,233,0.4), 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .tab-btn.active.cw-active {
+      background: var(--grad-cw);
+      box-shadow: 0 0 16px rgba(245,158,11,0.4), 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .tab-badge {
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em;
+      background: rgba(255,255,255,0.18);
+      border-radius: 99px;
+      padding: 0.1rem 0.4rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       MAIN CARD
+    ═══════════════════════════════════════════════════════════════════════ */
+    .card {
+      width: 100%;
+      max-width: 820px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(99,102,241,0.06),
+        0 24px 64px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+      position: relative;
+    }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--indigo), var(--violet), var(--cyan), transparent);
+      transition: background 0.4s;
+    }
+    .card.ws-mode::before {
+      background: linear-gradient(90deg, transparent, #0ea5e9, var(--cyan), var(--teal), transparent);
+    }
+
+    .card-inner {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      min-height: 520px;
+    }
+
+    /* ── left: form column ─────────────────────────────────────────────── */
+    .form-col {
+      padding: 2.2rem 2rem 2.2rem 2.4rem;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    .form-title {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 1.6rem;
+    }
+
+    /* Form panels — shown/hidden via JS */
+    .form-panel { display: none; flex-direction: column; flex: 1; }
+    .form-panel.active { display: flex; }
+
+    /* ── right: preview column ─────────────────────────────────────────── */
+    .preview-col {
+      padding: 2.2rem 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .preview-title {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       FORM FIELDS
+    ═══════════════════════════════════════════════════════════════════════ */
+    .field { margin-bottom: 1.4rem; }
+    .field-label {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-size: 0.82rem; font-weight: 500;
+      color: var(--text-2);
+      margin-bottom: 0.6rem;
+    }
+    .field-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem; color: var(--cyan); font-weight: 600;
+    }
+    .field-hint {
+      font-size: 0.72rem; color: var(--text-3);
+      margin-top: 0.45rem; line-height: 1.5;
+    }
+
+    /* Text input */
+    .input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      padding: 0.65rem 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      -webkit-appearance: none;
+    }
+    .input::placeholder { color: var(--text-3); }
+    .input:focus {
+      border-color: var(--indigo);
+      background: rgba(99,102,241,0.06);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+
+    /* Textarea */
+    textarea.input {
+      resize: vertical;
+      min-height: 96px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+    }
+
+    /* Seed row */
+    .seed-row { display: flex; gap: 0.5rem; }
+    .seed-row .input { flex: 1; font-family: 'JetBrains Mono', monospace; }
+    .btn-dice {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-xs);
+      color: var(--text-2);
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .btn-dice:hover { background: var(--surface-hover); border-color: var(--violet); color: var(--violet); }
+    .btn-dice.spinning { animation: spin 0.4s ease; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* Range slider */
+    .slider-wrap { position: relative; padding-bottom: 1.4rem; }
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 5px;
+      border-radius: 99px; outline: none; cursor: pointer;
+      background: linear-gradient(
+        to right,
+        var(--indigo) 0%, var(--indigo) var(--pct, 40%),
+        rgba(255,255,255,0.10) var(--pct, 40%), rgba(255,255,255,0.10) 100%
+      );
+      transition: background 0.1s;
+    }
+    input[type="range"].ws-slider {
+      background: linear-gradient(
+        to right,
+        #0ea5e9 0%, #0ea5e9 var(--pct, 40%),
+        rgba(255,255,255,0.10) var(--pct, 40%), rgba(255,255,255,0.10) 100%
+      );
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 0 3px var(--indigo), 0 2px 8px rgba(99,102,241,0.5);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 0 4px var(--indigo), 0 4px 16px rgba(99,102,241,0.6);
+    }
+    .slider-ticks {
+      display: flex; justify-content: space-between;
+      position: absolute; bottom: 0; left: 0; right: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem; color: var(--text-3);
+    }
+
+    /* Difficulty & Shape chips */
+    .difficulty { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.7rem; font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      border: 1px solid transparent;
+      transition: all 0.25s;
+      opacity: 0.35; cursor: pointer;
+    }
+    .chip.active { opacity: 1; }
+    .chip-easy   { border-color: rgba(34,197,94,0.5);  color: var(--green);  background: rgba(34,197,94,0.08); }
+    .chip-medium { border-color: rgba(251,191,36,0.5); color: var(--gold);   background: rgba(251,191,36,0.08); }
+    .chip-hard   { border-color: rgba(249,115,22,0.5); color: var(--coral);  background: rgba(249,115,22,0.08); }
+    .chip-expert { border-color: rgba(239,68,68,0.5);  color: var(--red);    background: rgba(239,68,68,0.08); }
+
+    .shape-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem; }
+    .shape-chip {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem; font-weight: 600;
+      padding: 0.28rem 0.6rem;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--border-bright);
+      color: var(--text-2);
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .shape-chip:hover { color: var(--text-1); background: var(--surface-hover); border-color: var(--violet); }
+    .shape-chip.active {
+      color: #fff;
+      background: var(--indigo);
+      border-color: var(--indigo);
+      box-shadow: 0 0 12px rgba(99,102,241,0.4);
+    }
+
+    /* Word count chip strip */
+    .word-count-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem; }
+    .wcc {
+      font-size: 0.68rem; font-weight: 600;
+      padding: 0.18rem 0.55rem;
+      border-radius: 99px;
+      border: 1px solid rgba(14,165,233,0.35);
+      color: #38bdf8;
+      background: rgba(14,165,233,0.08);
+      transition: opacity 0.2s;
+      opacity: 0.4;
+    }
+    .wcc.active { opacity: 1; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       GRID SIZE DISPLAY (2 sliders for WS)
+    ═══════════════════════════════════════════════════════════════════════ */
+    .dual-slider { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       GENERATE BUTTON
+    ═══════════════════════════════════════════════════════════════════════ */
+    .btn-generate {
+      margin-top: auto;
+      width: 100%;
+      padding: 0.9rem 1.5rem;
+      background: var(--grad-main);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.92rem; font-weight: 700;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s, background 0.3s;
+      box-shadow: 0 0 24px rgba(99,102,241,0.4), 0 4px 12px rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+    }
+    .btn-generate::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .btn-generate:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 0 36px rgba(99,102,241,0.55), 0 8px 24px rgba(0,0,0,0.35);
+    }
+    .btn-generate:active:not(:disabled) { transform: translateY(0); }
+    .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-generate::before {
+      content: '';
+      position: absolute; top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition: left 0.5s;
+    }
+    .btn-generate:hover::before { left: 160%; }
+    .btn-generate.ws-btn { background: var(--grad-ws); box-shadow: 0 0 24px rgba(14,165,233,0.4), 0 4px 12px rgba(0,0,0,0.3); }
+    .btn-generate.ws-btn:hover:not(:disabled) { box-shadow: 0 0 36px rgba(14,165,233,0.55), 0 8px 24px rgba(0,0,0,0.35); }
+    .btn-generate.loading { background: rgba(99,102,241,0.5); }
+    .btn-generate.success { background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); box-shadow: 0 0 24px rgba(34,197,94,0.4); }
+    .btn-generate.error   { background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%); box-shadow: 0 0 24px rgba(239,68,68,0.4); }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .btn-generate.loading .spinner { display: block; }
+    .btn-generate.loading .btn-icon { display: none; }
+
+    /* Progress bar */
+    .progress-bar-wrap {
+      width: 100%; height: 3px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 99px; overflow: hidden;
+      margin-top: 0.6rem;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .progress-bar-wrap.visible { opacity: 1; }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: var(--grad-main);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       PREVIEW PANEL (right column)
+    ═══════════════════════════════════════════════════════════════════════ */
+    /* Mini maze art */
+    .maze-art {
+      width: 100%; aspect-ratio: 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #mazeCanvas {
+      display: grid;
+      width: 100%; height: 100%; gap: 0;
+    }
+    .mc { transition: background 0.05s; }
+    .mc.wall  { background: #1a2540; }
+    .mc.open  { background: #0d1320; }
+    .mc.start { background: #3de4d8; }
+    .mc.end   { background: #ff6b6b; }
+    .mc.path  { background: #ef4444; }
+
+    /* Word search grid preview */
+    .ws-art {
+      width: 100%; aspect-ratio: 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      display: none;
+      padding: 0.5rem;
+    }
+    .ws-art.visible { display: block; }
+    #wsCanvas {
+      display: grid;
+      width: 100%; height: 100%;
+      gap: 2px;
+    }
+    .wsc {
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--text-2);
+      background: rgba(255,255,255,0.03);
+      transition: background 0.15s, color 0.15s;
+      min-width: 0;
+      min-height: 0;
+      line-height: 1;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .wsc.highlight {
+      font-weight: 800;
+      box-shadow: inset 0 0 0 1px currentColor;
+    }
+
+    /* Crossword grid preview */
+    .cw-art {
+      width: 100%; aspect-ratio: 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      display: none;
+      padding: 0.5rem;
+    }
+    .cw-art.visible { display: block; }
+    #cwCanvas {
+      display: grid;
+      width: 100%; height: 100%;
+      gap: 2px;
+    }
+    .cwc {
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #f1f5f9;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+      position: relative;
+      min-width: 0; min-height: 0;
+      line-height: 1; overflow: hidden;
+    }
+    .cwc.empty {
+      background: transparent;
+      border: none;
+    }
+    .cwc-num {
+      position: absolute; top: 1px; left: 2px;
+      font-size: 0.45rem; font-weight: 800;
+      color: #38bdf8;
+      line-height: 1;
+    }
+    .cwc-letter {
+      margin-top: 2px;
+    }
+    .btn-toggle-ans {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-bright);
+      color: var(--text-1);
+      border-radius: var(--radius-xs);
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-toggle-ans:hover {
+      background: rgba(255,255,255,0.12);
+    }
+
+    /* Stats */
+    .stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0.55rem; flex: 1;
+    }
+    .stat {
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 0.7rem 0.8rem;
+    }
+    .stat-label {
+      font-size: 0.66rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-3); margin-bottom: 0.15rem;
+    }
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem; font-weight: 600;
+      color: var(--text-1);
+    }
+
+    /* Files preview */
+    .files-list { display: flex; flex-direction: column; gap: 0.45rem; }
+    .file-item {
+      display: flex; align-items: center; gap: 0.55rem;
+      font-size: 0.78rem; color: var(--text-2);
+      padding: 0.5rem 0.7rem;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+    }
+    .file-icon {
+      width: 24px; height: 24px;
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .file-icon.pdf { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .file-icon.zip { background: rgba(99,102,241,0.15); color: var(--indigo); }
+
+    /* Preview panels */
+    .preview-panel { display: none; flex-direction: column; gap: 1rem; }
+    .preview-panel.active { display: flex; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════════════════════════════════════ */
+    .toast-wrap {
+      position: fixed; bottom: 2rem; right: 2rem;
+      display: flex; flex-direction: column;
+      gap: 0.6rem; z-index: 999;
+      pointer-events: none;
+    }
+    .toast {
+      display: flex; align-items: flex-start; gap: 0.7rem;
+      background: var(--bg-3);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      font-size: 0.83rem;
+      min-width: 260px; max-width: 360px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      pointer-events: all;
+      animation: toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    .toast.leave { animation: toastOut 0.25s ease forwards; }
+    @keyframes toastIn  { from { opacity:0; transform: translateX(40px) scale(0.95); } to { opacity:1; transform: none; } }
+    @keyframes toastOut { from { opacity:1; } to { opacity:0; transform: translateX(40px) scale(0.95); } }
+    .toast-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .toast-body { flex: 1; }
+    .toast-title { font-weight: 600; color: var(--text-1); margin-bottom: 0.1rem; }
+    .toast-msg   { color: var(--text-2); line-height: 1.45; }
+    .toast.error { border-color: rgba(239,68,68,0.35); }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       FEATURE STRIP
+    ═══════════════════════════════════════════════════════════════════════ */
+    .features {
+      display: flex; gap: 1.2rem;
+      margin-top: 1.8rem;
+      max-width: 820px; width: 100%;
+      flex-wrap: wrap;
+    }
+    .feat {
+      flex: 1; min-width: 160px;
+      display: flex; align-items: flex-start; gap: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.1rem;
+    }
+    .feat-icon {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-xs);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .feat-name { font-size: 0.82rem; font-weight: 600; color: var(--text-1); }
+    .feat-desc { font-size: 0.73rem; color: var(--text-3); margin-top: 0.15rem; line-height: 1.45; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════════════════════════════════ */
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-3);
+      line-height: 1.8;
+    }
+    footer a { color: var(--text-2); text-decoration: none; }
+    footer a:hover { color: var(--cyan); }
+    .api-link {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.72rem; color: var(--indigo);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 99px;
+      padding: 0.22rem 0.7rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      margin: 0 0.2rem;
+    }
+    .api-link:hover { background: rgba(99,102,241,0.1); border-color: var(--indigo); color: #a5b4fc; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════════════════════════════ */
+    @media (max-width: 680px) {
+      .card-inner { grid-template-columns: 1fr; }
+      .form-col { border-right: none; border-bottom: 1px solid var(--border); padding: 1.8rem 1.4rem; }
+      .preview-col { padding: 1.6rem 1.4rem; }
+      .maze-art, .ws-art { max-height: 200px; }
+      .features { flex-direction: column; }
+      .tabs { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- decorative background -->
+<div class="bg-layer" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- page shell -->
+<div class="page">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Vector PDFs · In-Memory · Print-Ready B&amp;W
+    </div>
+    <h1>Puzzle Generator<br/>Dashboard</h1>
+    <p class="hero-sub">
+      Choose a puzzle type, configure parameters, and hit Generate — receive a ZIP with
+      two print-ready black &amp; white PDFs entirely in memory.
+    </p>
+  </header>
+
+  <!-- PUZZLE TYPE TABS -->
+  <div class="tabs" role="tablist" aria-label="Puzzle type">
+    <button class="tab-btn active" id="tab-maze" role="tab" aria-selected="true" aria-controls="panel-maze">
+      <span class="tab-icon">🧩</span>
+      Maze
+      <span class="tab-badge">DFS</span>
+    </button>
+    <button class="tab-btn" id="tab-ws" role="tab" aria-selected="false" aria-controls="panel-ws">
+      <span class="tab-icon">🔤</span>
+      Word Search
+      <span class="tab-badge">8-DIR</span>
+    </button>
+    <button class="tab-btn" id="tab-cw" role="tab" aria-selected="false" aria-controls="panel-cw">
+      <span class="tab-icon">📝</span>
+      Crossword
+      <span class="tab-badge">GRID</span>
+    </button>
+  </div>
+
+  <!-- MAIN CARD -->
+  <main class="card" id="mainCard">
+    <div class="card-inner">
+
+      <!-- ── LEFT: form ──────────────────────────────────────────────────── -->
+      <div class="form-col">
+        <p class="form-title" id="formTitle">⚙ Maze Settings</p>
+
+        <!-- ── MAZE FORM PANEL ────────────────────────────────────────── -->
+        <div class="form-panel active" id="panel-maze" role="tabpanel" aria-labelledby="tab-maze">
+
+          <!-- Title -->
+          <div class="field">
+            <div class="field-label">PDF Title</div>
+            <input id="mazeTitleInput" class="input" type="text"
+              placeholder="e.g. Saturday Maze Challenge"
+              value="Maze Puzzle" maxlength="80"
+              autocomplete="off" spellcheck="false" />
+            <p class="field-hint">Appears as a heading on both the puzzle and answer PDF.</p>
+          </div>
+
+          <!-- Shape Selector -->
+          <div class="field">
+            <div class="field-label">
+              Maze Shape
+              <span class="field-value" id="shapeDisplay">Square</span>
+            </div>
+            <div class="shape-chips" id="shapeChips">
+              <button type="button" class="shape-chip active" data-shape="square" title="Square">⬛ Square</button>
+              <button type="button" class="shape-chip" data-shape="circle" title="Circle">⭕ Circle</button>
+              <button type="button" class="shape-chip" data-shape="heart" title="Heart">💖 Heart</button>
+              <button type="button" class="shape-chip" data-shape="star" title="Star">⭐ Star</button>
+              <button type="button" class="shape-chip" data-shape="triangle" title="Triangle">🔺 Triangle</button>
+              <button type="button" class="shape-chip" data-shape="diamond" title="Diamond">◆ Diamond</button>
+              <button type="button" class="shape-chip" data-shape="octagon" title="Octagon">🛑 Octagon</button>
+              <button type="button" class="shape-chip" data-shape="cross" title="Cross">✚ Cross</button>
+            </div>
+          </div>
+
+          <!-- Size -->
+          <div class="field">
+            <div class="field-label">
+              Maze Size
+              <span class="field-value" id="sizeDisplay">21 × 21</span>
+            </div>
+            <div class="slider-wrap">
+              <input id="sizeSlider" type="range" min="5" max="41" step="2" value="21"
+                aria-label="Maze size" />
+              <div class="slider-ticks">
+                <span>5</span><span>13</span><span>21</span><span>31</span><span>41</span>
+              </div>
+            </div>
+            <div class="difficulty">
+              <span class="chip chip-easy"   id="chip-easy">🟢 Easy</span>
+              <span class="chip chip-medium" id="chip-medium">🟡 Medium</span>
+              <span class="chip chip-hard"   id="chip-hard">🟠 Hard</span>
+              <span class="chip chip-expert" id="chip-expert">🔴 Expert</span>
+            </div>
+          </div>
+
+          <!-- Seed -->
+          <div class="field">
+            <div class="field-label">
+              RNG Seed
+              <span class="field-value" id="mazeSeedDisplay">random</span>
+            </div>
+            <div class="seed-row">
+              <input id="mazeSeedInput" class="input" type="number"
+                placeholder="Leave blank for random"
+                min="0" max="999999" autocomplete="off" />
+              <button class="btn-dice" id="mazeDiceBtn" title="Randomise seed" aria-label="Randomise maze seed">🎲</button>
+            </div>
+            <p class="field-hint">Fix a seed to regenerate the exact same maze later.</p>
+          </div>
+
+          <!-- CTA -->
+          <button id="mazeGenerateBtn" class="btn-generate" aria-label="Generate and download maze ZIP">
+            <div class="spinner"></div>
+            <span class="btn-icon">⚡</span>
+            <span class="btn-label">Generate &amp; Download</span>
+          </button>
+          <div class="progress-bar-wrap" id="mazeProgressWrap">
+            <div class="progress-bar" id="mazeProgressBar"></div>
+          </div>
+        </div><!-- /panel-maze -->
+
+        <!-- ── WORD SEARCH FORM PANEL ───────────────────────────────── -->
+        <div class="form-panel" id="panel-ws" role="tabpanel" aria-labelledby="tab-ws">
+
+          <!-- Title -->
+          <div class="field">
+            <div class="field-label">PDF Title</div>
+            <input id="wsTitleInput" class="input" type="text"
+              placeholder="e.g. Nature Word Search"
+              value="Word Search" maxlength="80"
+              autocomplete="off" spellcheck="false" />
+          </div>
+
+          <!-- Words textarea -->
+          <div class="field">
+            <div class="field-label">
+              Words to Hide
+              <span class="field-value" id="wsWordCount">0 words</span>
+            </div>
+            <textarea id="wsWordsInput" class="input"
+              placeholder="PYTHON&#10;FASTAPI&#10;PUZZLE&#10;GENERATOR&#10;MAZE"
+              aria-label="Words to hide in the puzzle, one per line"
+            >PYTHON
+FASTAPI
+PUZZLE
+GENERATOR
+MAZE
+ALGORITHM
+VECTOR
+SOLVER</textarea>
+            <p class="field-hint">One word per line. Non-alpha chars are stripped automatically.</p>
+            <div class="word-count-chips" id="wcChips">
+              <span class="wcc" id="wcc-few">1–5 words</span>
+              <span class="wcc" id="wcc-med">6–12 words</span>
+              <span class="wcc" id="wcc-many">13–20 words</span>
+              <span class="wcc" id="wcc-lots">21+ words</span>
+            </div>
+          </div>
+
+          <!-- Grid size (rows + cols) -->
+          <div class="dual-slider">
+            <div class="field" style="margin-bottom:0">
+              <div class="field-label">
+                Rows
+                <span class="field-value" id="wsRowsDisplay">15</span>
+              </div>
+              <div class="slider-wrap">
+                <input id="wsRowsSlider" class="ws-slider" type="range"
+                  min="10" max="25" step="1" value="15" aria-label="Grid rows" />
+                <div class="slider-ticks"><span>10</span><span>17</span><span>25</span></div>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <div class="field-label">
+                Cols
+                <span class="field-value" id="wsColsDisplay">15</span>
+              </div>
+              <div class="slider-wrap">
+                <input id="wsColsSlider" class="ws-slider" type="range"
+                  min="10" max="25" step="1" value="15" aria-label="Grid columns" />
+                <div class="slider-ticks"><span>10</span><span>17</span><span>25</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seed -->
+          <div class="field" style="margin-top:1.2rem">
+            <div class="field-label">
+              RNG Seed
+              <span class="field-value" id="wsSeedDisplay">random</span>
+            </div>
+            <div class="seed-row">
+              <input id="wsSeedInput" class="input" type="number"
+                placeholder="Leave blank for random"
+                min="0" max="999999" autocomplete="off" />
+              <button class="btn-dice" id="wsDiceBtn" title="Randomise seed" aria-label="Randomise word search seed">🎲</button>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <button id="wsGenerateBtn" class="btn-generate ws-btn" aria-label="Generate and download word search ZIP">
+            <div class="spinner"></div>
+            <span class="btn-icon">⚡</span>
+            <span class="btn-label">Generate &amp; Download</span>
+          </button>
+          <div class="progress-bar-wrap" id="wsProgressWrap">
+            <div class="progress-bar" id="wsProgressBar"></div>
+          </div>
+        </div><!-- /panel-ws -->
+
+        <!-- ── CROSSWORD FORM PANEL ─────────────────────────────────── -->
+        <div class="form-panel" id="panel-cw" role="tabpanel" aria-labelledby="tab-cw">
+
+          <!-- Title -->
+          <div class="field">
+            <div class="field-label">PDF Title</div>
+            <input id="cwTitleInput" class="input" type="text"
+              placeholder="e.g. Medical Crossword"
+              value="Crossword puzzle" maxlength="80"
+              autocomplete="off" spellcheck="false" />
+          </div>
+
+          <!-- Words/Clues textarea -->
+          <div class="field">
+            <div class="field-label">
+              Words &amp; Clues
+              <span class="field-value" id="cwWordCount">7 words</span>
+            </div>
+            <textarea id="cwWordsInput" class="input" style="height:150px;"
+              placeholder="WORD: Clue description&#10;RADICULITIS: Nerve root inflammation&#10;RHINORRHAGIA: Nose bleed"
+              aria-label="Words and clues for crossword, one per line"
+            >RADICULITIS: Nerve root inflammation
+RHINORRHAGIA: Nose bleed
+XEROPHTHALMIA: Dry eye condition
+QUERATOPLASTY: Corneal surgery
+RHINORRHOEA: Nasal discharge
+ORCHITIS: Testicular inflammation
+ADACRYA: Deficient lacrimation</textarea>
+            <p class="field-hint">Format: <code>WORD: Clue</code> (or just <code>WORD</code> on each line).</p>
+          </div>
+
+          <!-- Seed -->
+          <div class="field" style="margin-top:1.2rem">
+            <div class="field-label">
+              RNG Seed
+              <span class="field-value" id="cwSeedDisplay">random</span>
+            </div>
+            <div class="seed-row">
+              <input id="cwSeedInput" class="input" type="number"
+                placeholder="Leave blank for random"
+                min="0" max="999999" autocomplete="off" />
+              <button class="btn-dice" id="cwDiceBtn" title="Randomise seed" aria-label="Randomise crossword seed">🎲</button>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <button id="cwGenerateBtn" class="btn-generate cw-btn" style="background:var(--grad-cw);" aria-label="Generate and download crossword ZIP">
+            <div class="spinner"></div>
+            <span class="btn-icon">⚡</span>
+            <span class="btn-label">Generate &amp; Download</span>
+          </button>
+          <div class="progress-bar-wrap" id="cwProgressWrap">
+            <div class="progress-bar" id="cwProgressBar"></div>
+          </div>
+        </div><!-- /panel-cw -->
+
+      </div><!-- /form-col -->
+
+      <!-- ── RIGHT: live preview ────────────────────────────────────── -->
+      <div class="preview-col">
+
+        <!-- MAZE PREVIEW PANEL -->
+        <div class="preview-panel active" id="preview-maze">
+          <p class="preview-title">◉ Live Preview</p>
+          <div class="maze-art" aria-hidden="true">
+            <div id="mazeCanvas"></div>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Grid</div>
+              <div class="stat-value" id="statGrid">21×21</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Rooms</div>
+              <div class="stat-value" id="statRooms">100</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Passages</div>
+              <div class="stat-value" id="statPassages">~99</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Difficulty</div>
+              <div class="stat-value" id="statDiff">Medium</div>
+            </div>
+          </div>
+          <p class="preview-title" style="margin-top:0.2rem">📦 ZIP Contents</p>
+          <div class="files-list">
+            <div class="file-item">
+              <div class="file-icon pdf">PDF</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)">maze_puzzle.pdf</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">Blank maze · Start &amp; End markers</div>
+              </div>
+            </div>
+            <div class="file-item">
+              <div class="file-icon pdf">PDF</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)">maze_answer.pdf</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">BFS shortest-path overlaid</div>
+              </div>
+            </div>
+            <div class="file-item">
+              <div class="file-icon zip">ZIP</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)" id="mazeZipFilename">maze_21x21.zip</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">DEFLATE · generated in memory</div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /preview-maze -->
+
+        <!-- WORD SEARCH PREVIEW PANEL -->
+        <div class="preview-panel" id="preview-ws">
+          <p class="preview-title">◉ Live Preview</p>
+          <div class="ws-art visible" id="wsArt" aria-hidden="true">
+            <div id="wsCanvas"></div>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Grid</div>
+              <div class="stat-value" id="wsStatGrid">15×15</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Cells</div>
+              <div class="stat-value" id="wsStatCells">225</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Words</div>
+              <div class="stat-value" id="wsStatWords">8</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Directions</div>
+              <div class="stat-value" id="wsStatDirs">8</div>
+            </div>
+          </div>
+          <p class="preview-title" style="margin-top:0.2rem">📦 ZIP Contents</p>
+          <div class="files-list">
+            <div class="file-item">
+              <div class="file-icon pdf">PDF</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)">wordsearch_puzzle.pdf</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">Grid + word list to find</div>
+              </div>
+            </div>
+            <div class="file-item">
+              <div class="file-icon pdf">PDF</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)">wordsearch_answer.pdf</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">Found words outlined · dashed boxes</div>
+              </div>
+            </div>
+            <div class="file-item">
+              <div class="file-icon zip">ZIP</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)" id="wsZipFilename">wordsearch_15x15.zip</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">DEFLATE · generated in memory</div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /preview-ws -->
+
+        <!-- CROSSWORD PREVIEW PANEL -->
+        <div class="preview-panel" id="preview-cw">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <p class="preview-title" style="margin-bottom:0;">◉ Live Preview</p>
+            <button id="cwToggleAnsBtn" class="btn-toggle-ans">👁 Show Answers</button>
+          </div>
+          <div class="cw-art visible" id="cwArt" aria-hidden="true">
+            <div id="cwCanvas"></div>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Grid</div>
+              <div class="stat-value" id="cwStatGrid">0×0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Placed Words</div>
+              <div class="stat-value" id="cwStatPlaced">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Across Clues</div>
+              <div class="stat-value" id="cwStatAcross">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Down Clues</div>
+              <div class="stat-value" id="cwStatDown">0</div>
+            </div>
+          </div>
+          <p class="preview-title" style="margin-top:0.2rem">📦 ZIP Contents</p>
+          <div class="files-list">
+            <div class="file-item">
+              <div class="file-icon pdf">PDF</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)">crossword_puzzle.pdf</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">Grid with numbers · Across &amp; Down clues</div>
+              </div>
+            </div>
+            <div class="file-item">
+              <div class="file-icon pdf">PDF</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)">crossword_answer.pdf</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">Filled grid letters · solution key</div>
+              </div>
+            </div>
+            <div class="file-item">
+              <div class="file-icon zip">ZIP</div>
+              <div>
+                <div style="font-weight:600;font-size:0.78rem;color:var(--text-1)">crossword_puzzle.zip</div>
+                <div style="font-size:0.7rem;color:var(--text-3)">DEFLATE · generated in memory</div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /preview-cw -->
+
+      </div><!-- /preview-col -->
+    </div><!-- /card-inner -->
+  </main><!-- /card -->
+
+  <!-- FEATURE STRIP -->
+  <div class="features" aria-label="Feature highlights">
+    <div class="feat">
+      <div class="feat-icon" style="background:rgba(99,102,241,0.12);color:var(--indigo)">🧩</div>
+      <div>
+        <div class="feat-name">Perfect Mazes</div>
+        <div class="feat-desc">DFS Recursive Backtracker — exactly one path between any two cells.</div>
+      </div>
+    </div>
+    <div class="feat">
+      <div class="feat-icon" style="background:rgba(14,165,233,0.12);color:#38bdf8">🔤</div>
+      <div>
+        <div class="feat-name">Word Search</div>
+        <div class="feat-desc">8-direction placement with random fill — up to 30 hidden words.</div>
+      </div>
+    </div>
+    <div class="feat">
+      <div class="feat-icon" style="background:rgba(168,85,247,0.12);color:var(--violet)">⚡</div>
+      <div>
+        <div class="feat-name">Strict B&amp;W PDFs</div>
+        <div class="feat-desc">ReportLab vector-only output — pure black &amp; white, print-ready.</div>
+      </div>
+    </div>
+    <div class="feat">
+      <div class="feat-icon" style="background:rgba(34,197,94,0.12);color:var(--green)">💾</div>
+      <div>
+        <div class="feat-name">Zero Disk I/O</div>
+        <div class="feat-desc">Full pipeline runs in <code>io.BytesIO</code> — nothing touches the filesystem.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>
+      <a href="/api/docs" class="api-link" target="_blank">📄 Swagger UI</a>
+      <a href="/api/redoc" class="api-link" target="_blank">📘 ReDoc</a>
+      <a href="/api/openapi.json" class="api-link" target="_blank">{ } OpenAPI</a>
+    </p>
+    <p style="margin-top:0.6rem">
+      Python · FastAPI · ReportLab · zipfile &nbsp;·&nbsp; All processing in memory
+    </p>
+  </footer>
+
+</div><!-- /page -->
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MAZE_API = '/api/generate';
+const WS_API   = '/api/generate/wordsearch';
+const CW_API   = '/api/generate/crossword';
+
+// ── DOM refs ──────────────────────────────────────────────────────────────
+
+// Tabs
+const tabMaze   = document.getElementById('tab-maze');
+const tabWs     = document.getElementById('tab-ws');
+const tabCw     = document.getElementById('tab-cw');
+const card      = document.getElementById('mainCard');
+const formTitle = document.getElementById('formTitle');
+
+// Maze form
+const sizeSlider      = document.getElementById('sizeSlider');
+const sizeDisplay     = document.getElementById('sizeDisplay');
+const mazeTitleInput  = document.getElementById('mazeTitleInput');
+const mazeSeedInput   = document.getElementById('mazeSeedInput');
+const mazeSeedDisplay = document.getElementById('mazeSeedDisplay');
+const mazeDiceBtn     = document.getElementById('mazeDiceBtn');
+const mazeGenerateBtn = document.getElementById('mazeGenerateBtn');
+const mazeProgressWrap= document.getElementById('mazeProgressWrap');
+const mazeProgressBar = document.getElementById('mazeProgressBar');
+
+// Maze stats
+const statGrid     = document.getElementById('statGrid');
+const statRooms    = document.getElementById('statRooms');
+const statPassages = document.getElementById('statPassages');
+const statDiff     = document.getElementById('statDiff');
+const mazeZipFilename = document.getElementById('mazeZipFilename');
+
+// Maze preview
+const mazeCanvas = document.getElementById('mazeCanvas');
+
+// Difficulty chips
+const chips = {
+  easy:   document.getElementById('chip-easy'),
+  medium: document.getElementById('chip-medium'),
+  hard:   document.getElementById('chip-hard'),
+  expert: document.getElementById('chip-expert'),
+};
+
+// Word search form
+const wsTitleInput  = document.getElementById('wsTitleInput');
+const wsWordsInput  = document.getElementById('wsWordsInput');
+const wsWordCount   = document.getElementById('wsWordCount');
+const wsRowsSlider  = document.getElementById('wsRowsSlider');
+const wsColsSlider  = document.getElementById('wsColsSlider');
+const wsRowsDisplay = document.getElementById('wsRowsDisplay');
+const wsColsDisplay = document.getElementById('wsColsDisplay');
+const wsSeedInput   = document.getElementById('wsSeedInput');
+const wsSeedDisplay = document.getElementById('wsSeedDisplay');
+const wsDiceBtn     = document.getElementById('wsDiceBtn');
+const wsGenerateBtn = document.getElementById('wsGenerateBtn');
+const wsProgressWrap= document.getElementById('wsProgressWrap');
+const wsProgressBar = document.getElementById('wsProgressBar');
+
+// WS stats
+const wsStatGrid  = document.getElementById('wsStatGrid');
+const wsStatCells = document.getElementById('wsStatCells');
+const wsStatWords = document.getElementById('wsStatWords');
+const wsZipFilename = document.getElementById('wsZipFilename');
+
+// WS preview
+const wsArt = document.getElementById('wsArt');
+
+// Crossword form
+const cwTitleInput   = document.getElementById('cwTitleInput');
+const cwWordsInput   = document.getElementById('cwWordsInput');
+const cwWordCount    = document.getElementById('cwWordCount');
+const cwSeedInput    = document.getElementById('cwSeedInput');
+const cwSeedDisplay  = document.getElementById('cwSeedDisplay');
+const cwDiceBtn      = document.getElementById('cwDiceBtn');
+const cwGenerateBtn  = document.getElementById('cwGenerateBtn');
+const cwProgressWrap = document.getElementById('cwProgressWrap');
+const cwProgressBar  = document.getElementById('cwProgressBar');
+
+// Crossword stats & preview
+const cwStatGrid     = document.getElementById('cwStatGrid');
+const cwStatPlaced   = document.getElementById('cwStatPlaced');
+const cwStatAcross   = document.getElementById('cwStatAcross');
+const cwStatDown     = document.getElementById('cwStatDown');
+const cwToggleAnsBtn = document.getElementById('cwToggleAnsBtn');
+const cwCanvas       = document.getElementById('cwCanvas');
+
+// Toasts
+const toastWrap = document.getElementById('toastWrap');
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════════════
+
+let currentTab = 'maze';
+let currentCwSeed = null;
+let showCwAnswers = false;
+
+function switchTab(tab) {
+  currentTab = tab;
+
+  // Update tab buttons
+  tabMaze.classList.toggle('active', tab === 'maze');
+  tabWs.classList.toggle('active', tab === 'ws');
+  tabCw.classList.toggle('active', tab === 'cw');
+
+  tabMaze.setAttribute('aria-selected', tab === 'maze');
+  tabWs.setAttribute('aria-selected', tab === 'ws');
+  tabCw.setAttribute('aria-selected', tab === 'cw');
+
+  tabWs.classList.toggle('ws-active', tab === 'ws');
+  tabCw.classList.toggle('cw-active', tab === 'cw');
+
+  // Card top bar
+  card.classList.toggle('ws-mode', tab === 'ws');
+  card.classList.toggle('cw-mode', tab === 'cw');
+
+  // Form panels
+  document.getElementById('panel-maze').classList.toggle('active', tab === 'maze');
+  document.getElementById('panel-ws').classList.toggle('active', tab === 'ws');
+  document.getElementById('panel-cw').classList.toggle('active', tab === 'cw');
+
+  // Preview panels
+  document.getElementById('preview-maze').classList.toggle('active', tab === 'maze');
+  document.getElementById('preview-ws').classList.toggle('active', tab === 'ws');
+  document.getElementById('preview-cw').classList.toggle('active', tab === 'cw');
+
+  // Form title
+  if (tab === 'maze')      formTitle.textContent = '⚙ Maze Settings';
+  else if (tab === 'ws')   formTitle.textContent = '⚙ Word Search Settings';
+  else                     formTitle.textContent = '⚙ Crossword Settings';
+
+  if (tab === 'ws') {
+    updateWsStats();
+    renderWsPreview();
+  } else if (tab === 'cw') {
+    updateCwWordCount();
+    renderCwPreview();
+  }
+}
+
+tabMaze.addEventListener('click', () => switchTab('maze'));
+tabWs.addEventListener('click',   () => switchTab('ws'));
+tabCw.addEventListener('click',   () => switchTab('cw'));
+
+// Keyboard navigation
+const allTabBtns = [tabMaze, tabWs, tabCw];
+allTabBtns.forEach((btn, idx) => {
+  btn.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = allTabBtns[(idx + 1) % allTabBtns.length];
+      next.focus();
+      next.click();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prev = allTabBtns[(idx - 1 + allTabBtns.length) % allTabBtns.length];
+      prev.focus();
+      prev.click();
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MAZE LOGIC
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateSliderFill(slider) {
+  const min = +slider.min, max = +slider.max, val = +slider.value;
+  const pct = ((val - min) / (max - min) * 100).toFixed(1) + '%';
+  slider.style.setProperty('--pct', pct);
+}
+
+function getDifficulty(size) {
+  if (size <= 11) return { label: 'Easy',   chip: 'easy'   };
+  if (size <= 21) return { label: 'Medium', chip: 'medium' };
+  if (size <= 31) return { label: 'Hard',   chip: 'hard'   };
+  return               { label: 'Expert', chip: 'expert' };
+}
+
+function updateMazeStats() {
+  const size  = +sizeSlider.value;
+  const rooms = Math.floor(size / 2) * Math.floor(size / 2);
+  const diff  = getDifficulty(size);
+
+  sizeDisplay.textContent  = `${size} × ${size}`;
+  statGrid.textContent     = `${size}×${size}`;
+  statRooms.textContent    = rooms.toLocaleString();
+  statPassages.textContent = `~${(rooms - 1).toLocaleString()}`;
+  statDiff.textContent     = diff.label;
+  mazeZipFilename.textContent = `maze_${size}x${size}.zip`;
+
+  Object.entries(chips).forEach(([key, el]) => {
+    el.classList.toggle('active', key === diff.chip);
+  });
+}
+
+function updateMazeSeedDisplay() {
+  mazeSeedDisplay.textContent = mazeSeedInput.value.trim() === '' ? 'random' : mazeSeedInput.value.trim();
+}
+
+mazeDiceBtn.addEventListener('click', () => {
+  mazeSeedInput.value = Math.floor(Math.random() * 999999);
+  updateMazeSeedDisplay();
+  mazeDiceBtn.classList.add('spinning');
+  setTimeout(() => mazeDiceBtn.classList.remove('spinning'), 400);
+});
+
+// ── Maze preview (CSS grid DFS) ────────────────────────────────────────────
+
+const WALL = 0, PATH = 1;
+const _DIRS = [[-2,0],[2,0],[0,-2],[0,2]];
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function buildPreviewMaze(dim) {
+  const grid    = Array.from({length: dim}, () => new Uint8Array(dim));
+  const visited = new Set();
+  const stack   = [];
+  function key(r,c){ return r*1000+c; }
+  function push(r,c){
+    visited.add(key(r,c));
+    grid[r][c] = PATH;
+    stack.push([r,c,shuffle([..._DIRS]),0]);
+  }
+  push(1,1);
+  while(stack.length){
+    const f = stack[stack.length-1];
+    let carved = false;
+    while(f[3] < f[2].length){
+      const [dr,dc] = f[2][f[3]++];
+      const nr=f[0]+dr, nc=f[1]+dc;
+      const wr=f[0]+dr/2, wc=f[1]+dc/2;
+      if(nr>=0&&nr<dim&&nc>=0&&nc<dim&&!visited.has(key(nr,nc))){
+        grid[wr][wc]=PATH;
+        push(nr,nc);
+        carved=true; break;
+      }
+    }
+    if(!carved) stack.pop();
+  }
+  return grid;
+}
+
+function bfsPath(grid, dim, sr, sc, er, ec){
+  const came = new Map();
+  came.set(sr*1000+sc, null);
+  const q=[[sr,sc]]; let h=0;
+  while(h<q.length){
+    const [r,c]=q[h++];
+    if(r===er&&c===ec) break;
+    for(const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=r+dr,nc=c+dc;
+      const k=nr*1000+nc;
+      if(nr>=0&&nr<dim&&nc>=0&&nc<dim&&grid[nr][nc]===PATH&&!came.has(k)){
+        came.set(k,r*1000+c); q.push([nr,nc]);
+      }
+    }
+  }
+  const path=new Set();
+  let node=er*1000+ec;
+  while(node!==null){ path.add(node); node=came.get(node); }
+  return path;
+}
+
+let currentMazeSeed  = null;
+let currentMazeShape = 'square';
+let currentWsSeed    = null;
+
+document.querySelectorAll('.shape-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.shape-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMazeShape = btn.dataset.shape;
+    document.getElementById('shapeDisplay').textContent = btn.dataset.shape.charAt(0).toUpperCase() + btn.dataset.shape.slice(1);
+    scheduleMazePreview();
+  });
+});
+
+let mazePreviewTimer = null;
+function scheduleMazePreview() {
+  clearTimeout(mazePreviewTimer);
+  mazePreviewTimer = setTimeout(renderMazePreview, 120);
+}
+
+async function renderMazePreview() {
+  const size  = +sizeSlider.value;
+  const seedRaw = mazeSeedInput.value.trim();
+  const seed  = seedRaw !== '' ? parseInt(seedRaw, 10) : currentMazeSeed;
+  const shape = currentMazeShape;
+
+  try {
+    const res = await fetch('/api/preview/maze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ size, seed, shape, title: 'Preview' }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    currentMazeSeed = data.seed_used;
+
+    const dim = data.rows;
+    const pathSet = new Set(data.solution.map(([r, c]) => r * 1000 + c));
+
+    mazeCanvas.style.gridTemplateColumns = `repeat(${dim}, 1fr)`;
+    mazeCanvas.style.gridTemplateRows    = `repeat(${dim}, 1fr)`;
+    mazeCanvas.innerHTML = '';
+
+    for (let r = 0; r < dim; r++) {
+      for (let c = 0; c < dim; c++) {
+        const div = document.createElement('div');
+        div.className = 'mc';
+        const k = r * 1000 + c;
+
+        if (r === data.start[0] && c === data.start[1])      div.classList.add('start');
+        else if (r === data.end[0] && c === data.end[1])     div.classList.add('end');
+        else if (pathSet.has(k) && data.grid[r][c] === 1)    div.classList.add('path');
+        else if (data.grid[r][c] === 1)                      div.classList.add('open');
+        else if (data.grid[r][c] === 0)                      div.classList.add('wall');
+        else                                                 div.style.background = 'transparent';
+        mazeCanvas.appendChild(div);
+      }
+    }
+  } catch (err) {
+    console.error('Maze preview fetch error:', err);
+  }
+}
+
+sizeSlider.addEventListener('input', () => {
+  updateSliderFill(sizeSlider);
+  updateMazeStats();
+  scheduleMazePreview();
+});
+
+mazeSeedInput.addEventListener('input', () => {
+  currentMazeSeed = null;
+  updateMazeSeedDisplay();
+  scheduleMazePreview();
+});
+
+mazeDiceBtn.addEventListener('click', () => {
+  mazeSeedInput.value = Math.floor(Math.random() * 999999);
+  currentMazeSeed = parseInt(mazeSeedInput.value, 10);
+  updateMazeSeedDisplay();
+  mazeDiceBtn.classList.add('spinning');
+  setTimeout(() => mazeDiceBtn.classList.remove('spinning'), 400);
+  scheduleMazePreview();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  WORD SEARCH LOGIC
+// ═══════════════════════════════════════════════════════════════════════════
+
+function getWsWords() {
+  return wsWordsInput.value
+    .split('\n')
+    .map(w => w.trim().replace(/[^a-zA-Z]/g, '').toUpperCase())
+    .filter(w => w.length >= 2);
+}
+
+function updateWsWordCount() {
+  const words = getWsWords();
+  const n = words.length;
+  wsWordCount.textContent = `${n} word${n !== 1 ? 's' : ''}`;
+  wsStatWords.textContent = n;
+
+  // Activate correct chip
+  document.getElementById('wcc-few').classList.toggle('active',  n >= 1  && n <= 5);
+  document.getElementById('wcc-med').classList.toggle('active',  n >= 6  && n <= 12);
+  document.getElementById('wcc-many').classList.toggle('active', n >= 13 && n <= 20);
+  document.getElementById('wcc-lots').classList.toggle('active', n >= 21);
+}
+
+function updateWsStats() {
+  const rows = +wsRowsSlider.value;
+  const cols = +wsColsSlider.value;
+  wsRowsDisplay.textContent = rows;
+  wsColsDisplay.textContent = cols;
+  wsStatGrid.textContent    = `${rows}×${cols}`;
+  wsStatCells.textContent   = (rows * cols).toLocaleString();
+  wsZipFilename.textContent = `wordsearch_${rows}x${cols}.zip`;
+  updateSliderFill(wsRowsSlider);
+  updateSliderFill(wsColsSlider);
+  updateWsWordCount();
+}
+
+function updateWsSeedDisplay() {
+  wsSeedDisplay.textContent = wsSeedInput.value.trim() === '' ? 'random' : wsSeedInput.value.trim();
+}
+
+let wsPreviewTimer = null;
+function scheduleWsPreview() {
+  clearTimeout(wsPreviewTimer);
+  wsPreviewTimer = setTimeout(renderWsPreview, 120);
+}
+
+wsWordsInput.addEventListener('input', () => { updateWsWordCount(); scheduleWsPreview(); });
+wsRowsSlider.addEventListener('input', () => { updateWsStats(); scheduleWsPreview(); });
+wsColsSlider.addEventListener('input', () => { updateWsStats(); scheduleWsPreview(); });
+wsSeedInput.addEventListener('input',  () => {
+  currentWsSeed = null;
+  updateWsSeedDisplay();
+  scheduleWsPreview();
+});
+
+wsDiceBtn.addEventListener('click', () => {
+  wsSeedInput.value = Math.floor(Math.random() * 999999);
+  currentWsSeed = parseInt(wsSeedInput.value, 10);
+  updateWsSeedDisplay();
+  wsDiceBtn.classList.add('spinning');
+  setTimeout(() => wsDiceBtn.classList.remove('spinning'), 400);
+  scheduleWsPreview();
+});
+
+async function renderWsPreview() {
+  const words = getWsWords();
+  if (words.length === 0) return;
+
+  const rows  = +wsRowsSlider.value;
+  const cols  = +wsColsSlider.value;
+  const seedRaw = wsSeedInput.value.trim();
+  const seed  = seedRaw !== '' ? parseInt(seedRaw, 10) : currentWsSeed;
+
+  try {
+    const res = await fetch('/api/preview/wordsearch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words, rows, cols, seed, title: 'Preview' }),
+    });
+
+    if (!res.ok) return;
+    const data = await res.json();
+    currentWsSeed = data.seed_used;
+
+    const cellColorMap = new Map();
+    data.placements.forEach((pl, pIdx) => {
+      pl.cells.forEach(([r, c]) => {
+        cellColorMap.set(r * 1000 + c, pIdx);
+      });
+    });
+
+    const wsCanvas = document.getElementById('wsCanvas');
+    if (!wsCanvas) return;
+
+    wsCanvas.style.gridTemplateColumns = `repeat(${data.cols}, 1fr)`;
+    wsCanvas.style.gridTemplateRows    = `repeat(${data.rows}, 1fr)`;
+    wsCanvas.innerHTML = '';
+
+    const maxDim = Math.max(data.rows, data.cols);
+    wsCanvas.style.gap = maxDim > 18 ? '1px' : '2px';
+
+    let fontSize = '0.75rem';
+    if (maxDim > 12) fontSize = '0.62rem';
+    if (maxDim > 16) fontSize = '0.52rem';
+    if (maxDim > 20) fontSize = '0.42rem';
+    if (maxDim > 24) fontSize = '0.34rem';
+    if (maxDim > 28) fontSize = '0.28rem';
+
+    const PREVIEW_PALETTE = [
+      { bg: 'rgba(56, 189, 248, 0.25)', fg: '#38bdf8' },  // Sky Blue
+      { bg: 'rgba(134, 239, 172, 0.25)', fg: '#4ade80' }, // Lime Green
+      { bg: 'rgba(244, 114, 182, 0.25)', fg: '#f472b6' }, // Pink
+      { bg: 'rgba(253, 224, 71, 0.25)', fg: '#fde047' },  // Yellow
+      { bg: 'rgba(192, 132, 252, 0.25)', fg: '#c084fc' }, // Violet
+      { bg: 'rgba(251, 146, 60, 0.25)', fg: '#fb923c' },  // Orange
+      { bg: 'rgba(167, 243, 208, 0.25)', fg: '#34d399' }, // Mint
+      { bg: 'rgba(147, 197, 253, 0.25)', fg: '#60a5fa' }, // Blue
+    ];
+
+    for (let r = 0; r < data.rows; r++) {
+      for (let c = 0; c < data.cols; c++) {
+        const div = document.createElement('div');
+        div.className = 'wsc';
+        div.style.fontSize = fontSize;
+        div.textContent = data.grid[r][c];
+
+        const key = r * 1000 + c;
+        if (cellColorMap.has(key)) {
+          const pIdx = cellColorMap.get(key);
+          const style = PREVIEW_PALETTE[pIdx % PREVIEW_PALETTE.length];
+          div.classList.add('highlight');
+          div.style.background = style.bg;
+          div.style.color      = style.fg;
+        }
+        wsCanvas.appendChild(div);
+      }
+    }
+
+    wsStatWords.textContent = data.hidden_words.length;
+  } catch (err) {
+    console.error('Word search preview fetch error:', err);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CROSSWORD LOGIC
+// ═══════════════════════════════════════════════════════════════════════════
+
+function getCwWordLines() {
+  return cwWordsInput.value
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
+}
+
+function updateCwWordCount() {
+  const lines = getCwWordLines();
+  const n = lines.length;
+  cwWordCount.textContent = `${n} word${n !== 1 ? 's' : ''}`;
+}
+
+function updateCwSeedDisplay() {
+  cwSeedDisplay.textContent = cwSeedInput.value.trim() === '' ? 'random' : cwSeedInput.value.trim();
+}
+
+let cwPreviewTimer = null;
+function scheduleCwPreview() {
+  clearTimeout(cwPreviewTimer);
+  cwPreviewTimer = setTimeout(renderCwPreview, 150);
+}
+
+cwWordsInput.addEventListener('input', () => { updateCwWordCount(); scheduleCwPreview(); });
+cwSeedInput.addEventListener('input',  () => {
+  currentCwSeed = null;
+  updateCwSeedDisplay();
+  scheduleCwPreview();
+});
+
+cwDiceBtn.addEventListener('click', () => {
+  cwSeedInput.value = Math.floor(Math.random() * 999999);
+  currentCwSeed = parseInt(cwSeedInput.value, 10);
+  updateCwSeedDisplay();
+  cwDiceBtn.classList.add('spinning');
+  setTimeout(() => cwDiceBtn.classList.remove('spinning'), 400);
+  scheduleCwPreview();
+});
+
+cwToggleAnsBtn.addEventListener('click', () => {
+  showCwAnswers = !showCwAnswers;
+  cwToggleAnsBtn.textContent = showCwAnswers ? '🙈 Hide Answers' : '👁 Show Answers';
+  renderCwPreview();
+});
+
+async function renderCwPreview() {
+  const words = getCwWordLines();
+  if (words.length === 0) return;
+
+  const seedRaw = cwSeedInput.value.trim();
+  const seed = seedRaw !== '' ? parseInt(seedRaw, 10) : currentCwSeed;
+
+  try {
+    const res = await fetch('/api/preview/crossword', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words, seed, title: 'Preview' }),
+    });
+
+    if (!res.ok) return;
+    const data = await res.json();
+    currentCwSeed = data.seed_used;
+
+    cwStatGrid.textContent   = `${data.rows}×${data.cols}`;
+    cwStatPlaced.textContent = data.placed_words.length;
+    cwStatAcross.textContent = data.across_placements.length;
+    cwStatDown.textContent   = data.down_placements.length;
+
+    cwCanvas.style.gridTemplateColumns = `repeat(${data.cols}, 1fr)`;
+    cwCanvas.style.gridTemplateRows    = `repeat(${data.rows}, 1fr)`;
+    cwCanvas.innerHTML = '';
+
+    const maxDim = Math.max(data.rows, data.cols);
+    cwCanvas.style.gap = maxDim > 18 ? '1px' : '2px';
+
+    let fontSize = '0.75rem';
+    if (maxDim > 12) fontSize = '0.62rem';
+    if (maxDim > 16) fontSize = '0.52rem';
+    if (maxDim > 20) fontSize = '0.42rem';
+    if (maxDim > 24) fontSize = '0.34rem';
+
+    for (let r = 0; r < data.rows; r++) {
+      for (let c = 0; c < data.cols; c++) {
+        const div = document.createElement('div');
+        const letter = data.grid[r][c];
+
+        if (!letter) {
+          div.className = 'cwc empty';
+        } else {
+          div.className = 'cwc';
+          div.style.fontSize = fontSize;
+
+          const numKey = `${r},${c}`;
+          if (data.cell_numbers[numKey]) {
+            const numSpan = document.createElement('span');
+            numSpan.className = 'cwc-num';
+            numSpan.textContent = data.cell_numbers[numKey];
+            div.appendChild(numSpan);
+          }
+
+          const letSpan = document.createElement('span');
+          letSpan.className = 'cwc-letter';
+          letSpan.textContent = showCwAnswers ? letter : '';
+          div.appendChild(letSpan);
+        }
+
+        cwCanvas.appendChild(div);
+      }
+    }
+  } catch (err) {
+    console.error('Crossword preview fetch error:', err);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SHARED BUTTON STATE + PROGRESS
+// ═══════════════════════════════════════════════════════════════════════════
+
+let isBusy = false;
+
+function setButtonState(btn, progressWrap, progressBar, state, label) {
+  btn.className = 'btn-generate' + (btn === wsGenerateBtn ? ' ws-btn' : (btn === cwGenerateBtn ? ' cw-btn' : '')) + ' ' + state;
+  btn.querySelector('.btn-label').textContent = label;
+  btn.disabled = (state === 'loading');
+  isBusy = (state === 'loading');
+}
+
+function animateProgress(progressWrap, progressBar) {
+  progressWrap.classList.add('visible');
+  progressBar.style.width = '0%';
+  let pct = 0;
+  const fast = setInterval(() => {
+    pct = Math.min(pct + (Math.random() * 8 + 3), 70);
+    progressBar.style.width = pct + '%';
+    if (pct >= 70) clearInterval(fast);
+  }, 120);
+  return fast;
+}
+
+function finishProgress(progressWrap, progressBar) {
+  progressBar.style.width = '100%';
+  setTimeout(() => {
+    progressWrap.classList.remove('visible');
+    progressBar.style.width = '0%';
+  }, 600);
+}
+
+function showToast(type, title, msg, duration = 4000) {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' };
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `
+    <span class="toast-icon">${icons[type] ?? '💬'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${title}</div>
+      <div class="toast-msg">${msg}</div>
+    </div>`;
+  toastWrap.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('leave');
+    t.addEventListener('animationend', () => t.remove(), { once: true });
+  }, duration);
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MAZE GENERATE HANDLER
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleMazeGenerate() {
+  if (isBusy) return;
+  const size  = +sizeSlider.value;
+  const title = mazeTitleInput.value.trim() || 'Maze Puzzle';
+  const seedRaw = mazeSeedInput.value.trim();
+  const seed  = seedRaw !== '' ? parseInt(seedRaw, 10) : currentMazeSeed;
+  const shape = currentMazeShape;
+
+  setButtonState(mazeGenerateBtn, mazeProgressWrap, mazeProgressBar, 'loading', 'Generating maze…');
+  const fastTimer = animateProgress(mazeProgressWrap, mazeProgressBar);
+
+  try {
+    const response = await fetch(MAZE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ size, seed, shape, title }),
+    });
+    clearInterval(fastTimer);
+
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try { const json = await response.json(); detail = json.detail ?? detail; } catch {}
+      throw new Error(detail);
+    }
+
+    const blob = await response.blob();
+    const dim  = size % 2 === 0 ? size + 1 : size;
+    const filename = `maze_${dim}x${dim}.zip`;
+    finishProgress(mazeProgressWrap, mazeProgressBar);
+    triggerDownload(blob, filename);
+    setButtonState(mazeGenerateBtn, mazeProgressWrap, mazeProgressBar, 'success', '✓ Download started!');
+    showToast('success', 'Maze ready!', `${filename} (${(blob.size / 1024).toFixed(1)} KB) downloaded.`);
+    setTimeout(() => setButtonState(mazeGenerateBtn, mazeProgressWrap, mazeProgressBar, '', 'Generate & Download'), 2500);
+    renderMazePreview();
+
+  } catch (err) {
+    clearInterval(fastTimer);
+    finishProgress(mazeProgressWrap, mazeProgressBar);
+    setButtonState(mazeGenerateBtn, mazeProgressWrap, mazeProgressBar, 'error', '✗ Generation failed');
+    showToast('error', 'Generation failed', err.message ?? 'Unknown error. Check the server logs.');
+    setTimeout(() => setButtonState(mazeGenerateBtn, mazeProgressWrap, mazeProgressBar, '', 'Generate & Download'), 3000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  WORD SEARCH GENERATE HANDLER
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleWsGenerate() {
+  if (isBusy) return;
+  const words = getWsWords();
+  if (words.length === 0) {
+    showToast('warn', 'No words', 'Please enter at least one word (2+ letters).');
+    return;
+  }
+  const rows  = +wsRowsSlider.value;
+  const cols  = +wsColsSlider.value;
+  const title = wsTitleInput.value.trim() || 'Word Search';
+  const seedRaw = wsSeedInput.value.trim();
+  const seed  = seedRaw !== '' ? parseInt(seedRaw, 10) : currentWsSeed;
+
+  setButtonState(wsGenerateBtn, wsProgressWrap, wsProgressBar, 'loading', 'Generating word search…');
+  const fastTimer = animateProgress(wsProgressWrap, wsProgressBar);
+
+  try {
+    const response = await fetch(WS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words, rows, cols, seed, title }),
+    });
+    clearInterval(fastTimer);
+
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try { const json = await response.json(); detail = json.detail ?? detail; } catch {}
+      throw new Error(detail);
+    }
+
+    const blob = await response.blob();
+    const filename = `wordsearch_${rows}x${cols}.zip`;
+    finishProgress(wsProgressWrap, wsProgressBar);
+    triggerDownload(blob, filename);
+    setButtonState(wsGenerateBtn, wsProgressWrap, wsProgressBar, 'success', '✓ Download started!');
+    showToast('success', 'Word Search ready!', `${filename} (${(blob.size / 1024).toFixed(1)} KB) downloaded.`);
+    setTimeout(() => setButtonState(wsGenerateBtn, wsProgressWrap, wsProgressBar, '', 'Generate & Download'), 2500);
+    renderWsPreview();
+
+  } catch (err) {
+    clearInterval(fastTimer);
+    finishProgress(wsProgressWrap, wsProgressBar);
+    setButtonState(wsGenerateBtn, wsProgressWrap, wsProgressBar, 'error', '✗ Generation failed');
+    showToast('error', 'Generation failed', err.message ?? 'Unknown error. Check the server logs.');
+    setTimeout(() => setButtonState(wsGenerateBtn, wsProgressWrap, wsProgressBar, '', 'Generate & Download'), 3000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CROSSWORD GENERATE HANDLER
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleCwGenerate() {
+  if (isBusy) return;
+  const words = getCwWordLines();
+  if (words.length === 0) {
+    showToast('warn', 'No words', 'Please enter at least one word.');
+    return;
+  }
+  const title = cwTitleInput.value.trim() || 'Crossword puzzle';
+  const seedRaw = cwSeedInput.value.trim();
+  const seed  = seedRaw !== '' ? parseInt(seedRaw, 10) : currentCwSeed;
+
+  setButtonState(cwGenerateBtn, cwProgressWrap, cwProgressBar, 'loading', 'Generating crossword…');
+  const fastTimer = animateProgress(cwProgressWrap, cwProgressBar);
+
+  try {
+    const response = await fetch(CW_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words, seed, title }),
+    });
+    clearInterval(fastTimer);
+
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try { const json = await response.json(); detail = json.detail ?? detail; } catch {}
+      throw new Error(detail);
+    }
+
+    const blob = await response.blob();
+    const filename = `crossword_puzzle.zip`;
+    finishProgress(cwProgressWrap, cwProgressBar);
+    triggerDownload(blob, filename);
+    setButtonState(cwGenerateBtn, cwProgressWrap, cwProgressBar, 'success', '✓ Download started!');
+    showToast('success', 'Crossword ready!', `${filename} (${(blob.size / 1024).toFixed(1)} KB) downloaded.`);
+    setTimeout(() => setButtonState(cwGenerateBtn, cwProgressWrap, cwProgressBar, '', 'Generate & Download'), 2500);
+    renderCwPreview();
+
+  } catch (err) {
+    clearInterval(fastTimer);
+    finishProgress(cwProgressWrap, cwProgressBar);
+    setButtonState(cwGenerateBtn, cwProgressWrap, cwProgressBar, 'error', '✗ Generation failed');
+    showToast('error', 'Generation failed', err.message ?? 'Unknown error. Check the server logs.');
+    setTimeout(() => setButtonState(cwGenerateBtn, cwProgressWrap, cwProgressBar, '', 'Generate & Download'), 3000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EVENT WIRING
+// ═══════════════════════════════════════════════════════════════════════════
+
+mazeGenerateBtn.addEventListener('click', handleMazeGenerate);
+wsGenerateBtn.addEventListener('click',   handleWsGenerate);
+cwGenerateBtn.addEventListener('click',   handleCwGenerate);
+
+// Keyboard shortcuts: Ctrl/Cmd+Enter
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    if (currentTab === 'maze')      handleMazeGenerate();
+    else if (currentTab === 'ws')   handleWsGenerate();
+    else                            handleCwGenerate();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  INITIAL RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+
+updateSliderFill(sizeSlider);
+updateMazeStats();
+renderMazePreview();
+updateWsStats();
+renderWsPreview();
+updateCwWordCount();
+renderCwPreview();
+</script>
+</body>
+</html>
