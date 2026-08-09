@@ -549,6 +549,29 @@
     }
     [data-theme="dark"] .shape-chip.active { color: #fff; }
 
+    /* Direction mode chips (Word Search) */
+    .dir-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.45rem; }
+    .dir-chip {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 0.3rem 0.9rem;
+      border-radius: var(--radius-xs);
+      border: 1.5px solid var(--border);
+      color: var(--text-2);
+      background: var(--bg);
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: all var(--transition);
+    }
+    .dir-chip:hover { color: var(--text-1); border-color: var(--accent-ws); background: var(--accent-ws-light); }
+    .dir-chip.active {
+      color: var(--text-inv);
+      background: var(--accent-ws);
+      border-color: var(--accent-ws);
+    }
+    [data-theme="dark"] .dir-chip.active { color: #fff; }
+
     /* Word count chips */
     .word-count-chips { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.4rem; }
     .wcc {
@@ -1217,6 +1240,20 @@ SOLVER</textarea>
             </div>
           </div>
 
+          <!-- Direction Mode -->
+          <div class="field" style="margin-top:1.1rem">
+            <div class="field-label">
+              Direction Mode
+              <span class="field-value" id="wsDirDisplay">8-dir</span>
+            </div>
+            <div class="dir-chips" id="wsDirChips" role="group" aria-label="Word placement direction mode">
+              <button class="dir-chip" id="dir-chip-2" data-dirs="2" aria-pressed="false">2-dir</button>
+              <button class="dir-chip" id="dir-chip-4" data-dirs="4" aria-pressed="false">4-dir</button>
+              <button class="dir-chip active" id="dir-chip-8" data-dirs="8" aria-pressed="true">8-dir</button>
+            </div>
+            <p class="field-hint">2-dir: → ↓ &nbsp;·&nbsp; 4-dir: ↔ ↕ &nbsp;·&nbsp; 8-dir: all directions incl. diagonals</p>
+          </div>
+
           <!-- Seed -->
           <div class="field" style="margin-top:1.1rem">
             <div class="field-label">
@@ -1378,7 +1415,7 @@ ADACRYA: Deficient lacrimation</textarea>
             </div>
             <div class="stat">
               <div class="stat-label">Directions</div>
-              <div class="stat-value" id="wsStatDirs">8</div>
+              <div class="stat-value" id="wsStatDirs">8-dir</div>
             </div>
           </div>
           <p class="preview-title">📦 ZIP Contents</p>
@@ -1483,7 +1520,7 @@ ADACRYA: Deficient lacrimation</textarea>
       </div>
       <div>
         <div class="feat-name">Word Search</div>
-        <div class="feat-desc">8-direction placement, up to 30 hidden words randomly filled in.</div>
+        <div class="feat-desc">Flexible word placement in 2, 4, or all 8 compass directions.</div>
       </div>
     </div>
     <div class="feat">
@@ -1616,6 +1653,8 @@ const wsDiceBtn     = document.getElementById('wsDiceBtn');
 const wsGenerateBtn = document.getElementById('wsGenerateBtn');
 const wsProgressWrap= document.getElementById('wsProgressWrap');
 const wsProgressBar = document.getElementById('wsProgressBar');
+const wsDirDisplay  = document.getElementById('wsDirDisplay');
+const wsStatDirsEl  = document.getElementById('wsStatDirs');
 
 // WS stats
 const wsStatGrid  = document.getElementById('wsStatGrid');
@@ -1935,6 +1974,39 @@ mazeDiceBtn.addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  WORD SEARCH DIRECTION MODE
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Map from chip key → directions array sent to API (null = backend default = all 8)
+const DIR_MAP = {
+  '2': [[0,1],[1,0]],
+  '4': [[0,1],[0,-1],[1,0],[-1,0]],
+  '8': null,
+};
+
+let currentWsDir = '8';
+
+function getWsDirections() {
+  return DIR_MAP[currentWsDir] ?? null;
+}
+
+document.querySelectorAll('.dir-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dir-chip').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    currentWsDir = btn.dataset.dirs;
+    const label = currentWsDir + '-dir';
+    wsDirDisplay.textContent = label;
+    if (wsStatDirsEl) wsStatDirsEl.textContent = label;
+    scheduleWsPreview();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  WORD SEARCH LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -2007,11 +2079,15 @@ async function renderWsPreview() {
   const seedRaw = wsSeedInput.value.trim();
   const seed  = seedRaw !== '' ? parseInt(seedRaw, 10) : currentWsSeed;
 
+  const directions = getWsDirections();
+
   try {
+    const payload = { words, rows, cols, seed, title: 'Preview' };
+    if (directions !== null) payload.directions = directions;
     const res = await fetch('/api/preview/wordsearch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ words, rows, cols, seed, title: 'Preview' }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) return;
@@ -2073,6 +2149,7 @@ async function renderWsPreview() {
     }
 
     wsStatWords.textContent = data.hidden_words.length;
+    if (wsStatDirsEl) wsStatDirsEl.textContent = currentWsDir + '-dir';
   } catch (err) {
     console.error('Word search preview fetch error:', err);
   }
@@ -2326,11 +2403,15 @@ async function handleWsGenerate() {
   setButtonState(wsGenerateBtn, wsProgressWrap, wsProgressBar, 'loading', 'Generating word search…');
   const fastTimer = animateProgress(wsProgressWrap, wsProgressBar);
 
+  const directions = getWsDirections();
+
   try {
+    const wsPayload = { words, rows, cols, seed, title };
+    if (directions !== null) wsPayload.directions = directions;
     const response = await fetch(WS_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ words, rows, cols, seed, title }),
+      body: JSON.stringify(wsPayload),
     });
     clearInterval(fastTimer);
 

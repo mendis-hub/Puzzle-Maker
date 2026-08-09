@@ -22,7 +22,11 @@ A high-performance, full-stack web application for generating, previewing, and e
 
 ### 🔍 2. Word Search Generator
 - **Flexible Grid Layouts**: Customizable row and column dimensions.
-- **Multi-Directional Placement**: Supports all 8 directions — Horizontal, Vertical, and Diagonal placements (forward & reverse).
+- **Directional Mode Selection**: Choose difficulty by controlling word placement directions:
+  - **`2-dir` (Easy)**: Forward Horizontal (`→`) & Vertical (`↓`) only.
+  - **`4-dir` (Medium)**: Orthogonal Forward & Reverse (`→`, `←`, `↓`, `↑`).
+  - **`8-dir` (Hard)**: All 8 compass directions including Diagonals (`→`, `←`, `↓`, `↑`, `↘`, `↖`, `↙`, `↗`).
+- **Granular API Direction Vectors**: Backend API accepts custom `[dr, dc]` direction pairs for tailored puzzle generation.
 - **Custom Word Lists**: Input custom words with automatic text normalization, deduplication, and collision detection.
 - **Smart Grid Filling**: Automated letter distribution for optimal difficulty balance.
 
@@ -151,11 +155,17 @@ FastAPI automatically serves interactive API documentation:
 | :--- | :--- | :--- |
 | `POST` | `/api/preview/maze` | Returns maze JSON grid & solution path for web preview |
 | `POST` | `/api/generate` | Streams ZIP containing vector maze puzzle & answer PDFs |
-| `POST` | `/api/preview/wordsearch` | Returns word search JSON grid & placements for web preview |
-| `POST` | `/api/generate/wordsearch` | Streams ZIP containing word search puzzle & answer PDFs |
+| `POST` | `/api/preview/wordsearch` | Returns word search JSON grid & placements for web preview (supports `directions` array) |
+| `POST` | `/api/generate/wordsearch` | Streams ZIP containing word search puzzle & answer PDFs (supports `directions` array) |
 | `POST` | `/api/preview/crossword` | Returns crossword JSON grid, clue numbers & layout for web preview |
 | `POST` | `/api/generate/crossword` | Streams ZIP containing crossword puzzle & answer PDFs |
 | `GET` | `/api/health` | Service health & liveness status |
+
+> 💡 **Word Search Direction Parameter (`directions`)**:
+> Acceptable values for custom direction arrays:
+> - **2-dir**: `[[0, 1], [1, 0]]` (Right, Down)
+> - **4-dir**: `[[0, 1], [0, -1], [1, 0], [-1, 0]]` (Right, Left, Down, Up)
+> - **8-dir**: `null` / omit (All 8 directions including diagonals)
 
 ---
 
