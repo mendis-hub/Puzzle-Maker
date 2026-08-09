@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import io
 import random
+import re
 from functools import partial
 from typing import Dict
 
@@ -36,6 +37,16 @@ from crossword.exporter import export_crossword_zip
 router = APIRouter()
 
 _VERSION = "1.0.0"
+
+
+def sanitize_filename(title: str, fallback: str) -> str:
+    raw = title.strip() if title and title.strip() else fallback
+    clean = re.sub(r'[\\/:*?"<>|\x00-\x1f]', ' ', raw)
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    clean = re.sub(r'^[.\s]+|[.\s]+$', '', clean)
+    if not clean:
+        clean = fallback
+    return f"{clean}.zip"
 
 
 # ── health ────────────────────────────────────────────────────────────────────
@@ -170,7 +181,7 @@ async def generate_maze_zip(req: GenerateRequest) -> StreamingResponse:
         raise HTTPException(status_code=500, detail=f"Generation failed: {exc}") from exc
 
     dim = req.size if req.size % 2 == 1 else req.size + 1
-    filename = f"maze_{dim}x{dim}.zip"
+    filename = sanitize_filename(req.title, f"maze_{dim}x{dim}")
 
     return StreamingResponse(
         content=zip_buf,
@@ -221,7 +232,7 @@ async def generate_wordsearch_zip(req: WordSearchRequest) -> StreamingResponse:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Generation failed: {exc}") from exc
 
-    filename = f"wordsearch_{req.rows}x{req.cols}.zip"
+    filename = sanitize_filename(req.title, f"wordsearch_{req.rows}x{req.cols}")
 
     return StreamingResponse(
         content=zip_buf,
@@ -345,7 +356,7 @@ async def generate_crossword_zip(req: CrosswordRequest) -> StreamingResponse:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Generation failed: {exc}") from exc
 
-    filename = "crossword_puzzle.zip"
+    filename = sanitize_filename(req.title, "crossword_puzzle")
 
     return StreamingResponse(
         content=zip_buf,

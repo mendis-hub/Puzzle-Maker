@@ -56,7 +56,7 @@ class TestGenerate:
         r = self._post()
         cd = r.headers.get("content-disposition", "")
         assert "attachment" in cd
-        assert ".zip" in cd
+        assert 'filename="Test Maze.zip"' in cd
 
     def test_body_is_valid_zip(self):
         r = self._post()
@@ -83,10 +83,16 @@ class TestGenerate:
         assert r.status_code == 200
 
     def test_even_size_rounded_up(self):
-        """Even size → Pydantic validator rounds up → header reflects odd dim."""
+        """Even size → Pydantic validator rounds up → maze size header reflects odd dim."""
         r = client.post("/api/generate", json={"size": 10, "title": "T"})
         assert r.status_code == 200
-        assert "11x11" in r.headers.get("content-disposition", "")
+        assert r.headers.get("x-maze-size") == "11"
+        assert 'filename="T.zip"' in r.headers.get("content-disposition", "")
+
+    def test_zip_filename_matches_maze_title(self):
+        r = client.post("/api/generate", json={"size": 11, "title": "Custom Maze Title"})
+        assert r.status_code == 200
+        assert 'filename="Custom Maze Title.zip"' in r.headers.get("content-disposition", "")
 
     def test_x_maze_size_header(self):
         r = self._post()
@@ -258,4 +264,17 @@ class TestCrosswordAPI:
         missed = int(r.headers.get("x-crossword-missed", 0))
         assert placed == 1
         assert missed == 1
+
+    def test_zip_filename_matches_wordsearch_title(self):
+        payload = {"words": ["PYTHON", "MAZE"], "rows": 10, "cols": 10, "seed": 1, "title": "Animals Search"}
+        r = client.post("/api/generate/wordsearch", json=payload)
+        assert r.status_code == 200
+        assert 'filename="Animals Search.zip"' in r.headers.get("content-disposition", "")
+
+    def test_zip_filename_matches_crossword_title(self):
+        payload = {"words": ["PYTHON: Language", "MAZE: Grid puzzle"], "seed": 42, "title": "Medical Crossword"}
+        r = client.post("/api/generate/crossword", json=payload)
+        assert r.status_code == 200
+        assert 'filename="Medical Crossword.zip"' in r.headers.get("content-disposition", "")
+
 

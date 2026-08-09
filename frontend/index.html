@@ -2325,6 +2325,23 @@ function showToast(type, title, msg, duration = 4000) {
   }, duration);
 }
 
+function getSanitizedZipFilename(response, userTitle, defaultTitle) {
+  if (response && response.headers) {
+    const disposition = response.headers.get('Content-Disposition');
+    if (disposition) {
+      const match = disposition.match(/filename=["']?([^"';]+)["']?/i);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+  }
+  const raw = (userTitle && userTitle.trim()) ? userTitle.trim() : defaultTitle;
+  let clean = raw.replace(/[\\/:*?"<>|\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim();
+  clean = clean.replace(/^[.\s]+|[.\s]+$/g, '');
+  if (!clean) clean = defaultTitle;
+  return clean + '.zip';
+}
+
 function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
@@ -2365,8 +2382,7 @@ async function handleMazeGenerate() {
     }
 
     const blob = await response.blob();
-    const dim  = size % 2 === 0 ? size + 1 : size;
-    const filename = `maze_${dim}x${dim}.zip`;
+    const filename = getSanitizedZipFilename(response, title, 'Maze Puzzle');
     finishProgress(mazeProgressWrap, mazeProgressBar);
     triggerDownload(blob, filename);
     setButtonState(mazeGenerateBtn, mazeProgressWrap, mazeProgressBar, 'success', '✓ Download started!');
@@ -2422,7 +2438,7 @@ async function handleWsGenerate() {
     }
 
     const blob = await response.blob();
-    const filename = `wordsearch_${rows}x${cols}.zip`;
+    const filename = getSanitizedZipFilename(response, title, 'Word Search');
     finishProgress(wsProgressWrap, wsProgressBar);
     triggerDownload(blob, filename);
     setButtonState(wsGenerateBtn, wsProgressWrap, wsProgressBar, 'success', '✓ Download started!');
@@ -2472,7 +2488,7 @@ async function handleCwGenerate() {
     }
 
     const blob = await response.blob();
-    const filename = `crossword_puzzle.zip`;
+    const filename = getSanitizedZipFilename(response, title, 'Crossword puzzle');
     finishProgress(cwProgressWrap, cwProgressBar);
     triggerDownload(blob, filename);
     setButtonState(cwGenerateBtn, cwProgressWrap, cwProgressBar, 'success', '✓ Download started!');
