@@ -21,16 +21,24 @@ def export_crossword_zip(
     title: str = "Crossword puzzle",
     puzzle_filename: str = "crossword_puzzle.pdf",
     answer_filename: str = "crossword_answer.pdf",
+    stats: Optional[Dict[str, int]] = None,
 ) -> io.BytesIO:
     """
     Generate a crossword puzzle, render both PDFs, and return a zip archive
     — entirely in memory.
+
+    If *stats* is provided, it is filled with ``placed`` and ``missed``
+    word counts (e.g. for accurate response headers).
     """
     if not words:
         raise ValueError("At least one word must be provided.")
 
     # Step 1: Generate crossword layout
     cg = generate_crossword(words=words, seed=seed)
+
+    if stats is not None:
+        stats["placed"] = len(cg.placed_words)
+        stats["missed"] = len(cg.missed_words)
 
     # Step 2: Render PDFs
     timestamp = datetime.now().strftime("%Y-%m-%d")

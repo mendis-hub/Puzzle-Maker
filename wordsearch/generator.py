@@ -13,11 +13,21 @@ Algorithm
 
 Directions
 ──────────
-Only forward reading directions (no upwards, no right-to-left):
-    (dr, dc) ∈ {(0, 1), (1, 0), (1, 1)}
-    • (0, 1)  = Horizontal (Left to Right)
-    • (1, 0)  = Vertical (Top to Bottom)
-    • (1, 1)  = Diagonal (Top-Left to Bottom-Right)
+All eight reading directions are supported (forward & reverse, matching the
+frontend's "8-direction placement" feature):
+
+    (dr, dc) ∈ {(0, 1), (1, 0), (1, 1), (0, -1), (-1, 0), (1, -1), (-1, 1), (-1, -1)}
+    • (0, 1)   = Horizontal (Left to Right)
+    • (0, -1)  = Horizontal (Right to Left)
+    • (1, 0)   = Vertical (Top to Bottom)
+    • (-1, 0)  = Vertical (Bottom to Top)
+    • (1, 1)   = Diagonal (Top-Left to Bottom-Right)
+    • (1, -1)  = Diagonal (Top-Right to Bottom-Left)
+    • (-1, 1)  = Diagonal (Bottom-Left to Top-Right)
+    • (-1, -1) = Diagonal (Bottom-Right to Top-Left)
+
+Callers that want forward-only puzzles (e.g. for younger solvers) can pass
+``directions=[(0, 1), (1, 0), (1, 1)]`` explicitly.
 """
 
 from __future__ import annotations
@@ -32,8 +42,20 @@ from typing import List, Optional, Tuple
 
 EMPTY = "."
 
-# Forward directions only (no upwards dr < 0, no right-to-left dc < 0)
+# All 8 reading directions (forward & reverse)
 DIRECTIONS: List[Tuple[int, int]] = [
+    (0, 1),    # Horizontal (Left -> Right)
+    (0, -1),   # Horizontal (Right -> Left)
+    (1, 0),    # Vertical (Top -> Bottom)
+    (-1, 0),   # Vertical (Bottom -> Top)
+    (1, 1),    # Diagonal (Top-Left -> Bottom-Right)
+    (1, -1),   # Diagonal (Top-Right -> Bottom-Left)
+    (-1, 1),   # Diagonal (Bottom-Left -> Top-Right)
+    (-1, -1),  # Diagonal (Bottom-Right -> Top-Left)
+]
+
+# Forward-only subset — useful for simpler puzzles aimed at young solvers
+FORWARD_DIRECTIONS: List[Tuple[int, int]] = [
     (0, 1),   # Horizontal (Left -> Right)
     (1, 0),   # Vertical (Top -> Bottom)
     (1, 1),   # Diagonal (Top-Left -> Bottom-Right)
@@ -99,14 +121,14 @@ def generate_wordsearch(
     directions: Optional[List[Tuple[int, int]]] = None,
 ) -> WordGrid:
     """
-    Generate a word-search grid using forward directions only.
+    Generate a word-search grid using all 8 reading directions by default.
 
     Parameters
     ----------
     words      : list of words to hide (any case, non-alpha chars stripped)
     rows, cols : grid dimensions (5–40 each)
     seed       : RNG seed for reproducibility
-    directions : subset of DIRECTIONS to allow (default: forward-only)
+    directions : subset of DIRECTIONS to allow (default: all 8 directions)
 
     Returns
     -------
@@ -122,11 +144,17 @@ def generate_wordsearch(
     # Sanitise words
     clean: List[str] = []
     seen:  set[str]  = set()
+    missed_words: List[str] = []
     for w in words:
         w_clean = "".join(ch for ch in w.upper() if ch.isalpha())
-        if w_clean and w_clean not in seen and len(w_clean) <= max(rows, cols):
+        if not w_clean or w_clean in seen:
+            continue
+        seen.add(w_clean)
+        if len(w_clean) > max(rows, cols):
+            # Physically impossible to fit — report honestly as missed
+            missed_words.append(w_clean)
+        else:
             clean.append(w_clean)
-            seen.add(w_clean)
 
     # Sort longest-first
     clean.sort(key=len, reverse=True)
@@ -136,7 +164,6 @@ def generate_wordsearch(
 
     placements:   List[Placement] = []
     hidden_words: List[str]       = []
-    missed_words: List[str]       = []
 
     for word in clean:
         placed = _try_place(word, grid, rows, cols, dirs, rng)
@@ -181,15 +208,20 @@ def _try_place(
         attempts += 1
         dr, dc = rng.choice(dirs)
 
-        r_min = 0 if dr >= 0 else n - 1
-        r_max = rows - 1 if dr >= 0 else rows - 1
-        c_min = 0 if dc >= 0 else n - 1
-        c_max = cols - 1 if dc >= 0 else cols - 1
+        # Valid start-coordinate ranges for this (dr, dc) step
+        if dr == 1:
+            r_min, r_max = 0, rows - n
+        elif dr == -1:
+            r_min, r_max = n - 1, rows - 1
+        else:
+            r_min, r_max = 0, rows - 1
 
-        if dr == 1:  r_max = rows - n
-        if dr == -1: r_min = n - 1
-        if dc == 1:  c_max = cols - n
-        if dc == -1: c_min = n - 1
+        if dc == 1:
+            c_min, c_max = 0, cols - n
+        elif dc == -1:
+            c_min, c_max = n - 1, cols - 1
+        else:
+            c_min, c_max = 0, cols - 1
 
         if r_min > r_max or c_min > c_max:
             continue

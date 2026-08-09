@@ -16,7 +16,7 @@ from __future__ import annotations
 import io
 import zipfile
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from wordsearch.generator import generate_wordsearch
 from wordsearch.renderer import build_puzzle_pdf, build_answer_pdf
@@ -30,6 +30,8 @@ def export_wordsearch_zip(
     title:            str = "Word Search",
     puzzle_filename:  str = "wordsearch_puzzle.pdf",
     answer_filename:  str = "wordsearch_answer.pdf",
+    directions:       Optional[List[Tuple[int, int]]] = None,
+    stats:            Optional[Dict[str, int]] = None,
 ) -> io.BytesIO:
     """
     Generate a word-search, render both PDFs, and return a zip archive
@@ -43,6 +45,8 @@ def export_wordsearch_zip(
     title            : heading on both PDF pages
     puzzle_filename  : entry name for puzzle PDF in the zip
     answer_filename  : entry name for answer PDF in the zip
+    directions       : placement directions to allow (default: all 8)
+    stats            : optional dict filled with ``hidden`` / ``missed`` counts
 
     Returns
     -------
@@ -55,7 +59,11 @@ def export_wordsearch_zip(
         raise ValueError("At least one word must be provided.")
 
     # Step 1: Generate
-    wg = generate_wordsearch(words=words, rows=rows, cols=cols, seed=seed)
+    wg = generate_wordsearch(words=words, rows=rows, cols=cols, seed=seed, directions=directions)
+
+    if stats is not None:
+        stats["hidden"] = len(wg.hidden_words)
+        stats["missed"] = len(wg.missed_words)
 
     # Step 2: Render PDFs
     timestamp = datetime.now().strftime("%Y-%m-%d")
