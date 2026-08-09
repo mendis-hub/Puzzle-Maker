@@ -1892,12 +1892,19 @@ async function renderMazePreview() {
         div.className = 'mc';
         const k = r * 1000 + c;
 
-        if (r === data.start[0] && c === data.start[1])      div.classList.add('start');
-        else if (r === data.end[0] && c === data.end[1])     div.classList.add('end');
-        else if (showMazeAnswers && pathSet.has(k) && data.grid[r][c] === 1) div.classList.add('path');
-        else if (data.grid[r][c] === 1)                      div.classList.add('open');
-        else if (data.grid[r][c] === 0)                      div.classList.add('wall');
-        else                                                 div.style.background = 'transparent';
+        if (data.grid[r][c] === -1) {
+          div.style.background = 'transparent';
+        } else if (r === data.start[0] && c === data.start[1]) {
+          div.classList.add('start');
+        } else if (r === data.end[0] && c === data.end[1]) {
+          div.classList.add('end');
+        } else if (showMazeAnswers && pathSet.has(k) && data.grid[r][c] === 1) {
+          div.classList.add('path');
+        } else if (data.grid[r][c] === 1) {
+          div.classList.add('open');
+        } else {
+          div.classList.add('wall');
+        }
         mazeCanvas.appendChild(div);
       }
     }

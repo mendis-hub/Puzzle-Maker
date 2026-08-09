@@ -25,6 +25,7 @@ from typing import List, Tuple, Set
 
 
 # ── cell type constants ───────────────────────────────────────────────────────
+VOID: int = -1
 WALL: int = 0
 PATH: int = 1
 
@@ -180,7 +181,13 @@ def generate_maze(size: int = 21, seed: int | None = None, shape: str = "square"
     dim: int = size if size % 2 == 1 else size + 1
     rng = random.Random(seed)
 
-    grid: List[List[int]] = [[WALL] * dim for _ in range(dim)]
+    grid: List[List[int]] = [
+        [
+            WALL if is_inside_shape(r, c, dim, shape) else VOID
+            for c in range(dim)
+        ]
+        for r in range(dim)
+    ]
 
     valid_rooms: List[Tuple[int, int]] = [
         (r, c) for r in range(1, dim, 2) for c in range(1, dim, 2)
