@@ -9,6 +9,7 @@ import asyncio
 import io
 import random
 from functools import partial
+from typing import Dict
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -72,6 +73,7 @@ async def preview_wordsearch(req: WordSearchRequest) -> WordSearchPreviewRespons
                 rows=req.rows,
                 cols=req.cols,
                 seed=seed_used,
+                directions=req.directions,
             ),
         )
     except Exception as exc:
@@ -196,6 +198,8 @@ async def generate_wordsearch_zip(req: WordSearchRequest) -> StreamingResponse:
     """
     loop = asyncio.get_running_loop()
 
+    stats: Dict[str, int] = {}
+
     try:
         zip_buf: io.BytesIO = await loop.run_in_executor(
             None,
@@ -208,6 +212,8 @@ async def generate_wordsearch_zip(req: WordSearchRequest) -> StreamingResponse:
                 title=req.title,
                 puzzle_filename="wordsearch_puzzle.pdf",
                 answer_filename="wordsearch_answer.pdf",
+                directions=req.directions,
+                stats=stats,
             ),
         )
     except ValueError as exc:
@@ -223,7 +229,8 @@ async def generate_wordsearch_zip(req: WordSearchRequest) -> StreamingResponse:
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "X-WS-Size": f"{req.rows}x{req.cols}",
-            "X-WS-Words": str(len(req.words)),
+            "X-WS-Words": str(stats.get("hidden", 0)),
+            "X-WS-Missed": str(stats.get("missed", 0)),
         },
     )
 
@@ -318,6 +325,8 @@ async def generate_crossword_zip(req: CrosswordRequest) -> StreamingResponse:
     """
     loop = asyncio.get_running_loop()
 
+    stats: Dict[str, int] = {}
+
     try:
         zip_buf: io.BytesIO = await loop.run_in_executor(
             None,
@@ -328,6 +337,7 @@ async def generate_crossword_zip(req: CrosswordRequest) -> StreamingResponse:
                 title=req.title,
                 puzzle_filename="crossword_puzzle.pdf",
                 answer_filename="crossword_answer.pdf",
+                stats=stats,
             ),
         )
     except ValueError as exc:
@@ -342,7 +352,8 @@ async def generate_crossword_zip(req: CrosswordRequest) -> StreamingResponse:
         media_type="application/zip",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
-            "X-Crossword-Placed": str(len(req.words)),
+            "X-Crossword-Placed": str(stats.get("placed", 0)),
+            "X-Crossword-Missed": str(stats.get("missed", 0)),
         },
     )
 

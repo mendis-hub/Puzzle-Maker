@@ -5,7 +5,7 @@ Pydantic v2 request / response schemas for the Puzzle Generator API.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -72,6 +72,13 @@ class WordSearchRequest(BaseModel):
         max_length=80,
         description="Heading printed at the top of both PDF pages.",
     )
+    directions: Optional[List[Tuple[int, int]]] = Field(
+        default=None,
+        description=(
+            "Placement directions as [dr, dc] pairs. Omit for all 8 directions. "
+            "Forward-only example: [[0,1],[1,0],[1,1]]."
+        ),
+    )
 
     @field_validator("words")
     @classmethod
@@ -87,6 +94,21 @@ class WordSearchRequest(BaseModel):
         if not out:
             raise ValueError("No valid words provided (must contain at least one alpha word ≥ 2 letters).")
         return out
+
+    @field_validator("directions")
+    @classmethod
+    def validate_directions(cls, v: Optional[List[Tuple[int, int]]]) -> Optional[List[Tuple[int, int]]]:
+        """Ensure every direction is a supported non-zero [dr, dc] step."""
+        if v is None:
+            return None
+        allowed = {
+            (0, 1), (0, -1), (1, 0), (-1, 0),
+            (1, 1), (1, -1), (-1, 1), (-1, -1),
+        }
+        for d in v:
+            if len(d) != 2 or d not in allowed:
+                raise ValueError(f"Unsupported direction {d}; use [dr, dc] pairs like [1, 0].")
+        return v
 
     model_config = {
         "json_schema_extra": {

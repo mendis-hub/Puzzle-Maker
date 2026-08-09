@@ -104,6 +104,55 @@ class TestMazeGenerator:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  Shaped maze tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestMazeShapes:
+
+    @pytest.mark.parametrize("shape", ["circle", "heart", "triangle", "diamond",
+                                       "octagon", "cross", "vrect"])
+    def test_shape_generates_valid_maze(self, shape):
+        """Every advertised shape must produce a solvable, fully-connected maze."""
+        maze = generate_maze(size=21, seed=7, shape=shape)
+        assert maze.shape == shape
+
+        # All cells are WALL, PATH, or VOID (outside the shape)
+        for row in maze.grid:
+            for cell in row:
+                assert cell in (WALL, PATH, -1)
+
+        # All PATH cells inside shape are connected
+        visited = set()
+        queue = deque([maze.start])
+        visited.add(maze.start)
+        while queue:
+            r, c = queue.popleft()
+            for nb in maze.neighbours(r, c):
+                if nb not in visited:
+                    visited.add(nb)
+                    queue.append(nb)
+
+        all_path = {
+            (r, c)
+            for r in range(maze.rows)
+            for c in range(maze.cols)
+            if maze.grid[r][c] == PATH
+        }
+        assert visited == all_path, f"shape={shape} maze is not fully connected"
+
+        # Solvable start → end
+        path = solve_maze(maze)
+        assert path[0] == maze.start and path[-1] == maze.end
+
+    def test_unknown_shape_behaves_like_square(self):
+        """An unknown shape keeps its label but must behave like a plain square maze."""
+        maze = generate_maze(size=15, seed=1, shape="torus")
+        assert maze.cell_count == (maze.rows // 2) * (maze.cols // 2)
+        path = solve_maze(maze)
+        assert path[0] == maze.start and path[-1] == maze.end
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  Solver tests
 # ═══════════════════════════════════════════════════════════════════════════════
 

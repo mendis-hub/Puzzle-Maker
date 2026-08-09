@@ -160,17 +160,42 @@ def _build_single_layout(word_inputs: List[WordInput], rng: random.Random) -> di
     placements: List[Placement] = []
     missed: List[str] = []
 
-    # Place first word horizontally in center
-    first = word_inputs[0]
+    # Place the first word that fits horizontally in the center as the seed.
+    # Words longer than the canvas can never be placed — report them as missed
+    # instead of corrupting the grid with negative indices.
+    seed = None
+    for item in word_inputs:
+        if len(item.word) <= CANVAS_SIZE - 2:
+            seed = item
+            break
+        missed.append(item.word)
+
+    if seed is None:
+        return {
+            "score": -1e9,
+            "placements": [],
+            "missed": missed,
+            "grid": grid,
+            "min_r": 0,
+            "max_r": -1,
+            "min_c": 0,
+            "max_c": -1,
+        }
+
     r0 = MID
-    c0 = MID - len(first.word) // 2
-    p0 = Placement(word=first.word, clue=first.clue, row=r0, col=c0, direction="H")
+    c0 = MID - len(seed.word) // 2
+    p0 = Placement(word=seed.word, clue=seed.clue, row=r0, col=c0, direction="H")
 
     _apply_placement(grid, p0)
     placements.append(p0)
 
     # Place remaining words
-    for item in word_inputs[1:]:
+    for item in word_inputs:
+        if item.word == seed.word:
+            continue
+        if len(item.word) > CANVAS_SIZE - 2:
+            missed.append(item.word)
+            continue
         candidates = _find_valid_placements(item, grid, CANVAS_SIZE, placements)
         if not candidates:
             missed.append(item.word)

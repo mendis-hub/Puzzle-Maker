@@ -54,6 +54,31 @@ class TestCrosswordGenerator:
         assert cg1.grid == cg2.grid
         assert cg1.placed_words == cg2.placed_words
 
+    def test_overlong_word_reported_missed(self):
+        """Words longer than the canvas must be reported missed, not crash."""
+        cg = generate_crossword(["HELLO: Greeting", "X" * 90 + ": absurd"], seed=1)
+        assert "HELLO" in cg.placed_words
+        assert "X" * 90 in cg.missed_words
+        # grid must still be valid (no negative-index corruption)
+        for p in cg.placements:
+            for r, c in p.cells:
+                assert 0 <= r < cg.rows and 0 <= c < cg.cols
+
+    def test_all_too_long_raises(self):
+        """If no word fits the canvas, generation fails cleanly."""
+        with pytest.raises(ValueError):
+            generate_crossword(["X" * 90 + ": a", "Y" * 95 + ": b"], seed=1)
+
+    def test_parse_tuple_and_dict_inputs(self):
+        parsed = parse_word_inputs([("PYTHON", "A snake"), {"word": "MAZE", "clue": "Labyrinth"}])
+        assert len(parsed) == 2
+        assert parsed[0].word == "PYTHON" and parsed[0].clue == "A snake"
+        assert parsed[1].word == "MAZE" and parsed[1].clue == "Labyrinth"
+
+    def test_parse_deduplicates(self):
+        parsed = parse_word_inputs(["PYTHON: A", "PYTHON: B", "python: C"])
+        assert len(parsed) == 1
+
 
 class TestCrosswordPDFRenderer:
 

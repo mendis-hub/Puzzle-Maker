@@ -22,7 +22,7 @@ A high-performance, full-stack web application for generating, previewing, and e
 
 ### 🔍 2. Word Search Generator
 - **Flexible Grid Layouts**: Customizable row and column dimensions.
-- **Multi-Directional Placement**: Supports Horizontal, Vertical, and Diagonal placements (forward & reverse).
+- **Multi-Directional Placement**: Supports all 8 directions — Horizontal, Vertical, and Diagonal placements (forward & reverse).
 - **Custom Word Lists**: Input custom words with automatic text normalization, deduplication, and collision detection.
 - **Smart Grid Filling**: Automated letter distribution for optimal difficulty balance.
 
@@ -53,7 +53,7 @@ A high-performance, full-stack web application for generating, previewing, and e
 ## 📁 Repository Structure
 
 ```text
-Puzzle Generator/
+Puzzle Maker/
 ├── api/
 │   ├── models.py           # Pydantic request/response schemas
 │   └── routes.py           # FastAPI endpoints for preview & PDF streaming
@@ -61,13 +61,15 @@ Puzzle Generator/
 │   ├── generator.py        # DFS maze algorithm & shape generators
 │   └── solver.py           # BFS shortest-path maze solver
 ├── wordsearch/
-│   ├── generator.py        # Word search placement engine & filler logic
-│   └── exporter.py         # ReportLab PDF renderer for word searches
+│   ├── generator.py        # Word search placement engine (8 directions) & filler logic
+│   ├── renderer.py         # ReportLab PDF renderer for word searches
+│   └── exporter.py         # In-memory ZIP bundler for word-search PDFs
 ├── crossword/
 │   ├── generator.py        # Crossword placement & clue mapping engine
-│   └── exporter.py         # ReportLab PDF renderer for crosswords
+│   ├── renderer.py         # ReportLab PDF renderer for crosswords
+│   └── exporter.py         # In-memory ZIP bundler for crossword PDFs
 ├── pdf/
-│   └── canvas.py           # Shared PDF canvas formatting & page layouts
+│   └── renderer.py         # Shared PDF canvas formatting & page layouts
 ├── frontend/
 │   ├── index.html          # Single Page Application HTML shell
 │   └── static/             # CSS styles, JS preview logic, and web assets
@@ -77,6 +79,7 @@ Puzzle Generator/
 ├── smoke_test.py           # Automated smoke test suite
 ├── start.sh                # One-click startup script (macOS / Linux)
 ├── start.bat               # One-click startup script (Windows)
+├── pyproject.toml          # Packaging, pytest & ruff configuration
 └── requirements.txt        # Python package dependencies
 ```
 
@@ -106,8 +109,8 @@ The script automatically detects Python, installs required dependencies, and lau
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/mendis-hub/Puzzle-Generator.git
-   cd puzzle-generator
+   git clone https://github.com/mendis-hub/Puzzle-Maker.git
+   cd Puzzle-Maker
    ```
 
 2. **Create a Virtual Environment**:
