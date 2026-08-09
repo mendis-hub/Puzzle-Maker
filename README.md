@@ -10,6 +10,8 @@ A high-performance, full-stack web application for generating, previewing, and e
 
 > 🚀 **Live Demo**: Try out the live application on Render: **[https://puzzle-generator-m2g0.onrender.com/](https://puzzle-generator-m2g0.onrender.com/)**
 
+![Puzzle Generator Interface Preview](preview/preview.png)
+
 ---
 
 ## ✨ Features
